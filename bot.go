@@ -122,9 +122,31 @@ func broadcastSubs() error {
 	if err != nil {
 		return err
 	}
+
+	retriedList := make([]string, 0)
+
 	for _, ch := range *chList {
-		dg.ChannelMessageSendEmbed(ch.DiscordID, embed)
+		_, err = dg.ChannelMessageSendEmbed(ch.DiscordID, embed)
+		if err != nil {
+			retriedList = append(retriedList, ch.DiscordID)
+		}
 		time.Sleep(200 * time.Millisecond)
+	}
+	for {
+		if len(retriedList) > 0 {
+			tmp := make([]string, 0)
+			time.Sleep(1 * time.Minute)
+			for _, id := range retriedList {
+				_, err = dg.ChannelMessageSendEmbed(id, embed)
+				if err != nil {
+					tmp = append(tmp, id)
+				}
+				time.Sleep(200 * time.Millisecond)
+			}
+			retriedList = tmp
+		} else {
+			break
+		}
 	}
 
 	return nil
