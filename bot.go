@@ -53,7 +53,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				s.ChannelMessageSend(m.ChannelID, "เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง")
 			}
 			embed := discordgo.MessageEmbed{
-				Title: "รายงานสถานการณ์ โควิด-19",
+				Title: "รายงานสถานการณ์ โควิด-19 ในประเทศไทย",
 				Author: &discordgo.MessageEmbedAuthor{
 					Name:    cfg.Author.Name,
 					IconURL: cfg.Author.Icon,
