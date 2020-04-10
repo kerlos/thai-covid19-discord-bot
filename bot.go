@@ -130,7 +130,7 @@ func broadcastSubs() error {
 		if err != nil {
 			retriedList = append(retriedList, ch.DiscordID)
 		}
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 	}
 	for {
 		if len(retriedList) > 0 {
@@ -145,7 +145,7 @@ func broadcastSubs() error {
 				if err != nil {
 					tmp = append(tmp, id)
 				}
-				time.Sleep(200 * time.Millisecond)
+				time.Sleep(100 * time.Millisecond)
 			}
 			retriedList = tmp
 			retriedCount++
