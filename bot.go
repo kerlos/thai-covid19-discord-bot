@@ -143,22 +143,20 @@ func buildEmbed(data *covidData) (*discordgo.MessageEmbed, error) {
 	}
 	embed := discordgo.MessageEmbed{
 		Title: "รายงานสถานการณ์ โควิด-19 ในประเทศไทย",
-		Author: &discordgo.MessageEmbedAuthor{
-			Name:    cfg.Author.Name,
-			IconURL: cfg.Author.Icon,
-			URL:     cfg.Author.URL,
-		},
-		Color: 16721136,
+		/*
+			Author: &discordgo.MessageEmbedAuthor{
+				Name:    cfg.Author.Name,
+				IconURL: cfg.Author.Icon,
+				URL:     cfg.Author.URL,
+			},*/
+
+		Description: fmt.Sprintf("%s", currentDateTH(t)),
+		Color:       16721136,
 		Provider: &discordgo.MessageEmbedProvider{
 			Name: "กรมควบคุมโรค",
 			URL:  "http://covid19.ddc.moph.go.th/",
 		},
 		Fields: []*discordgo.MessageEmbedField{
-			{
-				Name:   fmt.Sprintf("%s", currentDateTH(t)),
-				Value:  "\u200B",
-				Inline: false,
-			},
 			{
 				Name:   "🤒 ติดเชื้อสะสม",
 				Value:  fmt.Sprintf("%s (เพิ่มขึ้น %s)", humanize.Comma(int64(data.Confirmed)), humanize.Comma(int64(data.NewConfirmed))),
@@ -192,7 +190,7 @@ func buildEmbed(data *covidData) (*discordgo.MessageEmbed, error) {
 		},
 		URL: "https://covid19.ddc.moph.go.th/",
 		Footer: &discordgo.MessageEmbedFooter{
-			Text: "ข้อมูลโดยกรมควบคุมโรค https://covid19.ddc.moph.go.th/",
+			Text: fmt.Sprintf("ข้อมูลโดย กรมควบคุมโรค\nบอทโดย %s\n%s", cfg.Author.Name, cfg.Author.URL),
 		},
 	}
 
