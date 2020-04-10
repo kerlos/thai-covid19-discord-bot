@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/robfig/cron/v3"
 	"github.com/spf13/viper"
 )
 
@@ -21,6 +22,7 @@ type config struct {
 }
 
 var cfg config
+var dg *discordgo.Session
 
 func init() {
 	viper.AddConfigPath(".")
@@ -35,10 +37,13 @@ func init() {
 	if err != nil {
 		log.Panic(err)
 	}
+
+	initDb()
 }
 
 func main() {
-	dg, err := discordgo.New("Bot " + cfg.BotToken)
+	var err error
+	dg, err = discordgo.New("Bot " + cfg.BotToken)
 	if err != nil {
 		fmt.Println("error creating Discord session,", err)
 		return
@@ -53,6 +58,14 @@ func main() {
 		fmt.Println("error opening connection,", err)
 		return
 	}
+	c := cron.New()
+	c.AddFunc("CRON_TZ=Asia/Bangkok 00 12 * * *", func() {
+		err := broadcastSubs()
+		if err != nil {
+			fmt.Printf("Error cron %s", err.Error())
+		}
+	})
+	c.Start()
 
 	// Wait here until CTRL-C or other term signal is received.
 	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
@@ -61,5 +74,7 @@ func main() {
 	<-sc
 
 	// Cleanly close down the Discord session.
+	c.Stop()
 	dg.Close()
+	db.Close()
 }

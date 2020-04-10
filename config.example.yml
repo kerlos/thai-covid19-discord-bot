@@ -1,1 +1,5 @@
-bot-token: #token here
+bot-token: token-here
+author:
+  name: name-here
+  url: url-here
+  icon: icon-here

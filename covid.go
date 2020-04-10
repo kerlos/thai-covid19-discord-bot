@@ -43,8 +43,8 @@ func getData() (*covidData, error) {
 	}
 
 	data := covidData{}
-	jsonErr := json.Unmarshal(body, &data)
-	if jsonErr != nil {
+	err = json.Unmarshal(body, &data)
+	if err != nil {
 		return nil, err
 	}
 

@@ -47,69 +47,86 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			data, err := getData()
 			if err != nil {
 				s.ChannelMessageSend(m.ChannelID, "เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง")
+				return
 			}
-			t, err := time.Parse("02/01/2006 15:04", data.UpdateDate)
+			embed, err := buildEmbed(data)
 			if err != nil {
 				s.ChannelMessageSend(m.ChannelID, "เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง")
+				return
 			}
-			embed := discordgo.MessageEmbed{
-				Title: "รายงานสถานการณ์ โควิด-19 ในประเทศไทย",
-				Author: &discordgo.MessageEmbedAuthor{
-					Name:    cfg.Author.Name,
-					IconURL: cfg.Author.Icon,
-					URL:     cfg.Author.URL,
-				},
-				Color: 16721136,
-				Provider: &discordgo.MessageEmbedProvider{
-					Name: "กรมควบคุมโรค",
-					URL:  "http://covid19.ddc.moph.go.th/",
-				},
-				Fields: []*discordgo.MessageEmbedField{
-					{
-						Name:   fmt.Sprintf("%s", currentDateTH(t)),
-						Value:  "\u200B",
-						Inline: false,
-					},
-					{
-						Name:   "🤒 ติดเชื้อสะสม",
-						Value:  fmt.Sprintf("%s (เพิ่มขึ้น %s)", humanize.Comma(int64(data.Confirmed)), humanize.Comma(int64(data.NewConfirmed))),
-						Inline: true,
-					},
-					{
-						Name:   "💀 เสียชีวิต",
-						Value:  fmt.Sprintf("%s (เพิ่มขึ้น %s)", humanize.Comma(int64(data.Deaths)), humanize.Comma(int64(data.NewDeaths))),
-						Inline: true,
-					},
-					{
-						Name:   "💪 หายแล้ว",
-						Value:  fmt.Sprintf("%s (เพิ่มขึ้น %s)", humanize.Comma(int64(data.Recovered)), humanize.Comma(int64(data.NewRecovered))),
-						Inline: true,
-					},
-					{
-						Name:   "🏥 รักษาอยู่ใน รพ.",
-						Value:  fmt.Sprintf("%s", humanize.Comma(int64(data.Hospitalized))),
-						Inline: true,
-					},
-					{
-						Name:   "🟥 อัตราการเสียชีวิต",
-						Value:  fmt.Sprintf("%.2f%%", (float64(data.Deaths)/float64(data.Confirmed))*100),
-						Inline: true,
-					},
-					{
-						Name:   "🟩 อัตราการหาย",
-						Value:  fmt.Sprintf("%.2f%%", (float64(data.Recovered)/float64(data.Confirmed))*100),
-						Inline: true,
-					},
-				},
-				URL: "https://covid19.ddc.moph.go.th/",
-				Footer: &discordgo.MessageEmbedFooter{
-					Text: "ข้อมูลโดยกรมควบคุมโรค https://covid19.ddc.moph.go.th/",
-				},
-			}
+			s.ChannelMessageSendEmbed(m.ChannelID, embed)
+		}
 
-			s.ChannelMessageSendEmbed(m.ChannelID, &embed)
+		if len(prms) > 1 {
+			switch prms[1] {
+			case "sub", "subscribe":
+				_, err := subscribe(m.ChannelID)
+				if err != nil {
+					s.ChannelMessageSend(m.ChannelID, "เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง")
+					return
+				}
+				/*
+					if !ok {
+						s.ChannelMessageSend(m.ChannelID, "ช่องนี้ได้ติดตามข่าวอยู่แล้ว")
+					}*/
+
+				s.ChannelMessageSend(m.ChannelID, "ติดตามข่าวเรียบร้อย")
+				break
+
+			case "unsub", "unsubscribe":
+				_, err := unsubscribe(m.ChannelID)
+				if err != nil {
+					s.ChannelMessageSend(m.ChannelID, "เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง")
+					return
+				}
+				/*
+					if !ok {
+						s.ChannelMessageSend(m.ChannelID, "ช่องนี้ไม่ได้ติดตามข่าว")
+					}*/
+
+				s.ChannelMessageSend(m.ChannelID, "ยกเลิกการติดตามข่าวเรียบร้อย")
+				break
+			case "help":
+				s.ChannelMessageSend(m.ChannelID, "พิมพ์ `/covid` เพื่อดูรายงานปัจจุบัน\nพิมพ์ `/covid sub` เพื่อติดตามข่าวอัตโนมัติทุกวันเวลา 12.00 น.\nพิมพ์ `/covid unsub` เพื่อยกเลิกการติดตามข่าว")
+				break
+			}
 		}
 	}
+}
+
+func broadcastSubs() error {
+	chList, err := getSubs()
+	if err != nil {
+		return err
+	}
+	now := time.Now()
+	var data *covidData
+	for {
+		data, err = getData()
+		if err != nil {
+			return err
+		}
+
+		t, err := time.Parse("02/01/2006 15:04", data.UpdateDate)
+		if err != nil {
+			return err
+		}
+
+		if dateEqual(t, now) {
+			break
+		}
+		time.Sleep(1 * time.Minute)
+	}
+
+	embed, err := buildEmbed(data)
+	if err != nil {
+		return err
+	}
+	for _, ch := range *chList {
+		dg.ChannelMessageSendEmbed(ch.DiscordID, embed)
+	}
+
+	return nil
 }
 
 func currentDateTH(t time.Time) string {
@@ -117,4 +134,73 @@ func currentDateTH(t time.Time) string {
 	m := months[int(t.Month())-1]
 
 	return fmt.Sprintf("วัน%sที่ %v %s %v", d, t.Day(), m, t.Year()+543)
+}
+
+func buildEmbed(data *covidData) (*discordgo.MessageEmbed, error) {
+	t, err := time.Parse("02/01/2006 15:04", data.UpdateDate)
+	if err != nil {
+		return nil, err
+	}
+	embed := discordgo.MessageEmbed{
+		Title: "รายงานสถานการณ์ โควิด-19 ในประเทศไทย",
+		Author: &discordgo.MessageEmbedAuthor{
+			Name:    cfg.Author.Name,
+			IconURL: cfg.Author.Icon,
+			URL:     cfg.Author.URL,
+		},
+		Color: 16721136,
+		Provider: &discordgo.MessageEmbedProvider{
+			Name: "กรมควบคุมโรค",
+			URL:  "http://covid19.ddc.moph.go.th/",
+		},
+		Fields: []*discordgo.MessageEmbedField{
+			{
+				Name:   fmt.Sprintf("%s", currentDateTH(t)),
+				Value:  "\u200B",
+				Inline: false,
+			},
+			{
+				Name:   "🤒 ติดเชื้อสะสม",
+				Value:  fmt.Sprintf("%s (เพิ่มขึ้น %s)", humanize.Comma(int64(data.Confirmed)), humanize.Comma(int64(data.NewConfirmed))),
+				Inline: true,
+			},
+			{
+				Name:   "💀 เสียชีวิต",
+				Value:  fmt.Sprintf("%s (เพิ่มขึ้น %s)", humanize.Comma(int64(data.Deaths)), humanize.Comma(int64(data.NewDeaths))),
+				Inline: true,
+			},
+			{
+				Name:   "💪 หายแล้ว",
+				Value:  fmt.Sprintf("%s (เพิ่มขึ้น %s)", humanize.Comma(int64(data.Recovered)), humanize.Comma(int64(data.NewRecovered))),
+				Inline: true,
+			},
+			{
+				Name:   "🏥 รักษาอยู่ใน รพ.",
+				Value:  fmt.Sprintf("%s", humanize.Comma(int64(data.Hospitalized))),
+				Inline: true,
+			},
+			{
+				Name:   "🟥 อัตราการเสียชีวิต",
+				Value:  fmt.Sprintf("%.2f%%", (float64(data.Deaths)/float64(data.Confirmed))*100),
+				Inline: true,
+			},
+			{
+				Name:   "🟩 อัตราการหาย",
+				Value:  fmt.Sprintf("%.2f%%", (float64(data.Recovered)/float64(data.Confirmed))*100),
+				Inline: true,
+			},
+		},
+		URL: "https://covid19.ddc.moph.go.th/",
+		Footer: &discordgo.MessageEmbedFooter{
+			Text: "ข้อมูลโดยกรมควบคุมโรค https://covid19.ddc.moph.go.th/",
+		},
+	}
+
+	return &embed, nil
+}
+
+func dateEqual(date1, date2 time.Time) bool {
+	y1, m1, d1 := date1.Date()
+	y2, m2, d2 := date2.Date()
+	return y1 == y2 && m1 == m2 && d1 == d2
 }
