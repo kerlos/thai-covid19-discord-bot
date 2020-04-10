@@ -124,6 +124,7 @@ func broadcastSubs() error {
 	}
 	for _, ch := range *chList {
 		dg.ChannelMessageSendEmbed(ch.DiscordID, embed)
+		time.Sleep(200 * time.Millisecond)
 	}
 
 	return nil
