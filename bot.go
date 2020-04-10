@@ -124,16 +124,20 @@ func broadcastSubs() error {
 	}
 
 	retriedList := make([]string, 0)
-
+	retriedCount := 1
 	for _, ch := range *chList {
 		_, err = dg.ChannelMessageSendEmbed(ch.DiscordID, embed)
 		if err != nil {
 			retriedList = append(retriedList, ch.DiscordID)
 		}
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 	}
 	for {
 		if len(retriedList) > 0 {
+			fmt.Printf("%v channel failed to deliver. retry attempted: %v\n", len(retriedList), retriedCount)
+			if retriedCount > 3 {
+				break
+			}
 			tmp := make([]string, 0)
 			time.Sleep(1 * time.Minute)
 			for _, id := range retriedList {
@@ -141,9 +145,10 @@ func broadcastSubs() error {
 				if err != nil {
 					tmp = append(tmp, id)
 				}
-				time.Sleep(200 * time.Millisecond)
+				time.Sleep(100 * time.Millisecond)
 			}
 			retriedList = tmp
+			retriedCount++
 		} else {
 			break
 		}

@@ -62,7 +62,7 @@ func main() {
 	c.AddFunc("CRON_TZ=Asia/Bangkok 00 12 * * *", func() {
 		err := broadcastSubs()
 		if err != nil {
-			fmt.Printf("Error cron %s", err.Error())
+			fmt.Printf("Error cron %s\n", err.Error())
 		}
 	})
 	c.Start()
