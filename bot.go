@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -127,7 +128,8 @@ func broadcastSubs() error {
 	retriedCount := 1
 
 	for _, ch := range *chList {
-		_, err = dgs[0].ChannelMessageSendEmbed(ch.DiscordID, embed)
+		shardID := getShardID(ch.DiscordID)
+		_, err = dgs[shardID].ChannelMessageSendEmbed(ch.DiscordID, embed)
 		if err != nil {
 			retriedList = append(retriedList, ch.DiscordID)
 		}
@@ -230,4 +232,16 @@ func dateEqual(date1, date2 time.Time) bool {
 	y1, m1, d1 := date1.Date()
 	y2, m2, d2 := date2.Date()
 	return y1 == y2 && m1 == m2 && d1 == d2
+}
+
+func getShardID(channelID string) int {
+	if cfg.ShardCount == 1 {
+		return 0
+	}
+	gid, err := strconv.ParseUint(channelID, 10, 64)
+	if err != nil {
+		return 0
+	}
+	shardID := (gid >> 22) % uint64(cfg.ShardCount)
+	return int(shardID)
 }
