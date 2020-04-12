@@ -22,7 +22,8 @@ type config struct {
 }
 
 var cfg config
-var dg *discordgo.Session
+
+var dgs []*discordgo.Session
 
 func init() {
 	viper.AddConfigPath(".")
@@ -41,23 +42,35 @@ func init() {
 	initDb()
 }
 
+const shardCount = 3
+
 func main() {
 	var err error
-	dg, err = discordgo.New("Bot " + cfg.BotToken)
-	if err != nil {
-		fmt.Println("error creating Discord session,", err)
-		return
-	}
+	dgs = make([]*discordgo.Session, 0)
 
-	// Register the messageCreate func as a callback for MessageCreate events.
-	dg.AddHandler(messageCreate)
+	for i := 0; i < shardCount; i++ {
+		dg, err := discordgo.New("Bot " + cfg.BotToken)
+		if err != nil {
+			panic(err)
+		}
+		// Assign Shard
+		dg.ShardID = i
+		dg.ShardCount = shardCount
+
+		// Register the messageCreate func as a callback for MessageCreate events.
+		dg.AddHandler(messageCreate)
+		dgs = append(dgs, dg)
+	}
 
 	// Open a websocket connection to Discord and begin listening.
-	err = dg.Open()
-	if err != nil {
-		fmt.Println("error opening connection,", err)
-		return
+	for i, dg := range dgs {
+		err = dg.Open()
+		if err != nil {
+			fmt.Printf("error opening connection for shard %v, %s", i, err.Error())
+			return
+		}
 	}
+
 	c := cron.New()
 	c.AddFunc("CRON_TZ=Asia/Bangkok 00 12 * * *", func() {
 		err := broadcastSubs()
@@ -75,6 +88,8 @@ func main() {
 
 	// Cleanly close down the Discord session.
 	c.Stop()
-	dg.Close()
+	for _, dg := range dgs {
+		dg.Close()
+	}
 	db.Close()
 }
