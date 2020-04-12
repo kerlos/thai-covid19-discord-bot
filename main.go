@@ -13,8 +13,9 @@ import (
 )
 
 type config struct {
-	BotToken string `mapstructure:"bot-token"`
-	Author   struct {
+	BotToken   string `mapstructure:"bot-token"`
+	ShardCount int    `mapstructure:"shard-count"`
+	Author     struct {
 		Name string `mapstructure:"name"`
 		URL  string `mapstructure:"url"`
 		Icon string `mapstructure:"icon"`
@@ -42,20 +43,18 @@ func init() {
 	initDb()
 }
 
-const shardCount = 3
-
 func main() {
 	var err error
 	dgs = make([]*discordgo.Session, 0)
 
-	for i := 0; i < shardCount; i++ {
+	for i := 0; i < cfg.ShardCount; i++ {
 		dg, err := discordgo.New("Bot " + cfg.BotToken)
 		if err != nil {
 			panic(err)
 		}
 		// Assign Shard
 		dg.ShardID = i
-		dg.ShardCount = shardCount
+		dg.ShardCount = cfg.ShardCount
 
 		// Register the messageCreate func as a callback for MessageCreate events.
 		dg.AddHandler(messageCreate)

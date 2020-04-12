@@ -1,4 +1,5 @@
 bot-token: token-here
+shard-count: 1 # change to 2 or more to support shard
 author:
   name: name-here
   url: url-here
