@@ -125,8 +125,9 @@ func broadcastSubs() error {
 
 	retriedList := make([]string, 0)
 	retriedCount := 1
+
 	for _, ch := range *chList {
-		_, err = dg.ChannelMessageSendEmbed(ch.DiscordID, embed)
+		_, err = dgs[0].ChannelMessageSendEmbed(ch.DiscordID, embed)
 		if err != nil {
 			retriedList = append(retriedList, ch.DiscordID)
 		}
@@ -141,7 +142,7 @@ func broadcastSubs() error {
 			tmp := make([]string, 0)
 			time.Sleep(1 * time.Minute)
 			for _, id := range retriedList {
-				_, err = dg.ChannelMessageSendEmbed(id, embed)
+				_, err = dgs[0].ChannelMessageSendEmbed(id, embed)
 				if err != nil {
 					tmp = append(tmp, id)
 				}
