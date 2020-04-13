@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/robfig/cron/v3"
@@ -72,9 +73,19 @@ func main() {
 
 	c := cron.New()
 	c.AddFunc("CRON_TZ=Asia/Bangkok 00 12 * * *", func() {
-		err := broadcastSubs()
-		if err != nil {
-			fmt.Printf("Error cron %s\n", err.Error())
+		retryCount := 0
+		for {
+			err := broadcastSubs()
+			if err != nil {
+				fmt.Printf("Error cron %s\n", err.Error())
+				retryCount++
+				if retryCount > 5 {
+					break
+				}
+				time.Sleep(5 * time.Minute)
+				continue
+			}
+			break
 		}
 	})
 	c.Start()
