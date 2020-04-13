@@ -109,12 +109,12 @@ func touchFile(name string) error {
 func getTodayBroadcastStatus() (bool, error) {
 	loc, _ := time.LoadLocation("Asia/Bangkok")
 	now := time.Now()
-	now = now.In(loc)
+	now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
 	str := now.Format(time.RFC3339)
 	c := 0
-	err := db.Where(&broadcastStamp{BroadcastDate: str}).Count(&c).Error
+	err := db.Model(broadcastStamp{}).Where(&broadcastStamp{BroadcastDate: str}).Count(&c).Error
 	if err != nil {
-		return false, err
+		return true, err
 	}
 	if c == 0 {
 		return false, nil
@@ -125,7 +125,7 @@ func getTodayBroadcastStatus() (bool, error) {
 func stampBroadcastDate() error {
 	loc, _ := time.LoadLocation("Asia/Bangkok")
 	now := time.Now()
-	now = now.In(loc)
+	now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
 	str := now.Format(time.RFC3339)
 	b := broadcastStamp{
 		BroadcastDate: str,

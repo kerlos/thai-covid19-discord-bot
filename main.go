@@ -77,16 +77,13 @@ func main() {
 
 	// Wait here until CTRL-C or other term signal is received.
 	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
-	go func() {
-		broadcasted, err := getTodayBroadcastStatus()
-		if err != nil {
-			fmt.Printf("Error getting today broadcast status, skipping.\n")
-			return
-		}
-		if !broadcasted {
-			broadcast()
-		}
-	}()
+	broadcasted, err := getTodayBroadcastStatus()
+	if err != nil {
+		fmt.Printf("Error getting today broadcast status, skipping.\n")
+	}
+	if !broadcasted {
+		broadcast()
+	}
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
