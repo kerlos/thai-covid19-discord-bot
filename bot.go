@@ -100,7 +100,9 @@ func broadcastSubs() error {
 	if err != nil {
 		return err
 	}
+	loc := time.LoadLocation("Asia/Bangkok")
 	now := time.Now()
+	now = now.In(loc)
 	var data *covidData
 	delayNotice := true
 	for {
@@ -167,7 +169,13 @@ func broadcastSubs() error {
 			break
 		}
 	}
-
+	now = time.Now()
+	now = now.In(loc)
+	fmt.Printf("finished broadcast at %s\n", now.Format(time.Stamp))
+	err = stampBroadcastDate()
+	if err != nil {
+		fmt.Printf("error stamp broadcast date %s", err.Error())
+	}
 	return nil
 }
 

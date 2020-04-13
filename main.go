@@ -72,26 +72,21 @@ func main() {
 	}
 
 	c := cron.New()
-	c.AddFunc("CRON_TZ=Asia/Bangkok 00 12 * * *", func() {
-		retryCount := 0
-		for {
-			err := broadcastSubs()
-			if err != nil {
-				fmt.Printf("Error cron %s\n", err.Error())
-				retryCount++
-				if retryCount > 5 {
-					break
-				}
-				time.Sleep(5 * time.Minute)
-				continue
-			}
-			break
-		}
-	})
+	c.AddFunc("CRON_TZ=Asia/Bangkok 00 12 * * *", broadcast)
 	c.Start()
 
 	// Wait here until CTRL-C or other term signal is received.
 	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
+	go func() {
+		broadcasted,err := getTodayBroadcastStatus()
+		if err !=nil {
+			fmt.Printf("Error getting today broadcast status, skipping.\n")
+			return
+		}
+		if !broadcasted {
+			broadcast()
+		}
+	}
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
@@ -102,4 +97,21 @@ func main() {
 		dg.Close()
 	}
 	db.Close()
+}
+
+func broadcast() {
+	retryCount := 0
+	for {
+		err := broadcastSubs()
+		if err != nil {
+			fmt.Printf("Error cron %s\n", err.Error())
+			retryCount++
+			if retryCount > 5 {
+				break
+			}
+			time.Sleep(5 * time.Minute)
+			continue
+		}
+		break
+	}
 }
