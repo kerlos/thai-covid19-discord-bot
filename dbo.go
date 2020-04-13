@@ -3,16 +3,23 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
 
-type channel struct {
-	gorm.Model
-	DiscordID string
-	Active    bool
-}
+type (
+	channel struct {
+		gorm.Model
+		DiscordID string
+		Active    bool
+	}
+
+	broadcast struct {
+		BroadcastDate string
+	}
+)
 
 var db *gorm.DB
 
@@ -26,6 +33,7 @@ func initDb() {
 		log.Panic(err)
 	}
 	db.AutoMigrate(channel{})
+	db.AutoMigrate(broadcast{})
 }
 
 func getSubs() (*[]channel, error) {
@@ -96,4 +104,33 @@ func touchFile(name string) error {
 	}
 	file.Close()
 	return nil
+}
+
+func getTodayBroadcastStatus() (bool, error) {
+	loc := time.LoadLocation("Asia/Bangkok")
+	now := time.Now()
+	now = now.In(loc)
+	str := now.Format(time.RFC3339)
+	c := 0
+	err := db.Where(&broadcast{BroadcastDate: str}).Count(&c).Error
+	if err != nil {
+		return false, err
+	}
+	if c > 0 {
+		return true, nil
+	}
+}
+
+func stampBroadcastDate() error {
+	loc := time.LoadLocation("Asia/Bangkok")
+	now := time.Now()
+	now = now.In(loc)
+	str := now.Format(time.RFC3339)
+	b := broadcast{
+		BroadcastDate: str,
+	}
+	err := db.Save(&b).Error
+	if err != nil {
+		return false, err
+	}
 }
