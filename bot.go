@@ -100,7 +100,7 @@ func broadcastSubs() error {
 	if err != nil {
 		return err
 	}
-	loc := time.LoadLocation("Asia/Bangkok")
+	loc, _ := time.LoadLocation("Asia/Bangkok")
 	now := time.Now()
 	now = now.In(loc)
 	var data *covidData

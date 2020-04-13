@@ -16,7 +16,7 @@ type (
 		Active    bool
 	}
 
-	broadcast struct {
+	broadcastStamp struct {
 		BroadcastDate string
 	}
 )
@@ -33,7 +33,7 @@ func initDb() {
 		log.Panic(err)
 	}
 	db.AutoMigrate(channel{})
-	db.AutoMigrate(broadcast{})
+	db.AutoMigrate(broadcastStamp{})
 }
 
 func getSubs() (*[]channel, error) {
@@ -107,30 +107,33 @@ func touchFile(name string) error {
 }
 
 func getTodayBroadcastStatus() (bool, error) {
-	loc := time.LoadLocation("Asia/Bangkok")
+	loc, _ := time.LoadLocation("Asia/Bangkok")
 	now := time.Now()
 	now = now.In(loc)
 	str := now.Format(time.RFC3339)
 	c := 0
-	err := db.Where(&broadcast{BroadcastDate: str}).Count(&c).Error
+	err := db.Where(&broadcastStamp{BroadcastDate: str}).Count(&c).Error
 	if err != nil {
 		return false, err
 	}
-	if c > 0 {
-		return true, nil
+	if c == 0 {
+		return false, nil
 	}
+	return true, nil
 }
 
 func stampBroadcastDate() error {
-	loc := time.LoadLocation("Asia/Bangkok")
+	loc, _ := time.LoadLocation("Asia/Bangkok")
 	now := time.Now()
 	now = now.In(loc)
 	str := now.Format(time.RFC3339)
-	b := broadcast{
+	b := broadcastStamp{
 		BroadcastDate: str,
 	}
 	err := db.Save(&b).Error
 	if err != nil {
-		return false, err
+		return err
 	}
+
+	return nil
 }
