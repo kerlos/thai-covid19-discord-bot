@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
 
 type covidData struct {
@@ -24,29 +25,41 @@ type covidData struct {
 const apiURL = "https://covid19.th-stat.com/api/open/today"
 
 func getData() (*covidData, error) {
+	retryCount := 0
+	var err error
+	for {
+		if retryCount > 3 {
+			return nil, err
+		} else if retryCount > 0 {
+			time.Sleep(10 * time.Second)
+		}
+		cl := http.Client{}
 
-	cl := http.Client{}
+		req, err := http.NewRequest("GET", apiURL, nil)
+		if err != nil {
+			retryCount++
+			continue
+		}
 
-	req, err := http.NewRequest("GET", apiURL, nil)
-	if err != nil {
-		return nil, err
+		res, err := cl.Do(req)
+		if err != nil {
+			retryCount++
+			continue
+		}
+
+		body, readErr := ioutil.ReadAll(res.Body)
+		if readErr != nil {
+			retryCount++
+			continue
+		}
+
+		data := covidData{}
+		err = json.Unmarshal(body, &data)
+		//sometime api return empty content
+		if err != nil {
+			retryCount++
+			continue
+		}
+		return &data, nil
 	}
-
-	res, err := cl.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	body, readErr := ioutil.ReadAll(res.Body)
-	if readErr != nil {
-		return nil, err
-	}
-
-	data := covidData{}
-	err = json.Unmarshal(body, &data)
-	if err != nil {
-		return nil, err
-	}
-
-	return &data, nil
 }

@@ -102,6 +102,7 @@ func broadcastSubs() error {
 	}
 	now := time.Now()
 	var data *covidData
+	delayNotice := true
 	for {
 		data, err = getData()
 		if err != nil {
@@ -116,7 +117,16 @@ func broadcastSubs() error {
 		if dateEqual(t, now) {
 			break
 		}
-		time.Sleep(1 * time.Minute)
+		fmt.Printf("broadcast data not update, retrying...\n")
+		if delayNotice {
+			for _, ch := range *chList {
+				shardID := getShardID(ch.DiscordID)
+				dgs[shardID].ChannelMessageSend(ch.DiscordID, "ข้อมูลจากกรมควบคุมโรคยังไม่มีข้อมูลใหม่ ระบบจะส่งข้อมูลอีกครั้งหลังจากได้รับข้อมูลใหม่แล้ว")
+				time.Sleep(100 * time.Millisecond)
+			}
+			delayNotice = false
+		}
+		time.Sleep(5 * time.Minute)
 	}
 
 	embed, err := buildEmbed(data)
@@ -135,6 +145,7 @@ func broadcastSubs() error {
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
+
 	for {
 		if len(retriedList) > 0 {
 			fmt.Printf("%v channel failed to deliver. retry attempted: %v\n", len(retriedList), retriedCount)
