@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/patrickmn/go-cache"
 	"github.com/robfig/cron/v3"
 	"github.com/spf13/viper"
 )
@@ -24,14 +25,14 @@ type config struct {
 }
 
 var cfg config
-
 var dgs []*discordgo.Session
+var ca *cache.Cache
 
 func init() {
 	viper.AddConfigPath(".")
 	viper.SetConfigType("yaml")
 	viper.SetConfigName("config")
-
+	ca = cache.New(30*time.Minute, 60*time.Minute)
 	err := viper.ReadInConfig()
 	if err != nil {
 		log.Panic(err)

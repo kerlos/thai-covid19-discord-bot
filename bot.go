@@ -45,16 +45,26 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if strings.HasPrefix(content, "/covid") {
 		prms := strings.Split(content, " ")
 		if len(prms) == 1 || prms[1] == "today" {
-			data, err := getData()
-			if err != nil {
-				s.ChannelMessageSend(m.ChannelID, "เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง")
-				return
+			var embed *discordgo.MessageEmbed
+			if embedCache, found := ca.Get("embed"); found {
+				embed = embedCache.(*discordgo.MessageEmbed)
 			}
-			embed, err := buildEmbed(data)
-			if err != nil {
-				s.ChannelMessageSend(m.ChannelID, "เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง")
-				return
+
+			if embed == nil {
+				data, err := getData()
+				if err != nil {
+					s.ChannelMessageSend(m.ChannelID, "เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง")
+					return
+				}
+				embed, err = buildEmbed(data)
+				if err != nil {
+					s.ChannelMessageSend(m.ChannelID, "เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง")
+					return
+				}
+
+				ca.Set("embed", embed, 30*time.Minute)
 			}
+
 			s.ChannelMessageSendEmbed(m.ChannelID, embed)
 		}
 
