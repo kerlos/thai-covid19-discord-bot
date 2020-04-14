@@ -150,10 +150,12 @@ func broadcastSubs() error {
 
 	for {
 		if len(retriedList) > 0 {
-			fmt.Printf("%v channel failed to deliver. retry attempted: %v\n", len(retriedList), retriedCount)
 			if retriedCount > 3 {
+				fmt.Printf("%v channels unsubscribe after 3 retries\n", len(retriedList))
+				ubsubscribeBulk(retriedList)
 				break
 			}
+			fmt.Printf("%v channel failed to deliver. retry attempted: %v\n", len(retriedList), retriedCount)
 			tmp := make([]string, 0)
 			time.Sleep(1 * time.Minute)
 			for _, id := range retriedList {
