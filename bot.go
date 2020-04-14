@@ -45,16 +45,26 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if strings.HasPrefix(content, "/covid") {
 		prms := strings.Split(content, " ")
 		if len(prms) == 1 || prms[1] == "today" {
-			data, err := getData()
-			if err != nil {
-				s.ChannelMessageSend(m.ChannelID, "เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง")
-				return
+			var embed *discordgo.MessageEmbed
+			if embedCache, found := ca.Get("embed"); found {
+				embed = embedCache.(*discordgo.MessageEmbed)
 			}
-			embed, err := buildEmbed(data)
-			if err != nil {
-				s.ChannelMessageSend(m.ChannelID, "เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง")
-				return
+
+			if embed == nil {
+				data, err := getData()
+				if err != nil {
+					s.ChannelMessageSend(m.ChannelID, "เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง")
+					return
+				}
+				embed, err = buildEmbed(data)
+				if err != nil {
+					s.ChannelMessageSend(m.ChannelID, "เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง")
+					return
+				}
+
+				ca.Set("embed", embed, 30*time.Minute)
 			}
+
 			s.ChannelMessageSendEmbed(m.ChannelID, embed)
 		}
 
@@ -150,10 +160,12 @@ func broadcastSubs() error {
 
 	for {
 		if len(retriedList) > 0 {
-			fmt.Printf("%v channel failed to deliver. retry attempted: %v\n", len(retriedList), retriedCount)
 			if retriedCount > 3 {
+				fmt.Printf("%v channels unsubscribe after 3 retries\n", len(retriedList))
+				ubsubscribeBulk(retriedList)
 				break
 			}
+			fmt.Printf("%v channel failed to deliver. retry attempted: %v\n", len(retriedList), retriedCount)
 			tmp := make([]string, 0)
 			time.Sleep(1 * time.Minute)
 			for _, id := range retriedList {

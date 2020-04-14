@@ -97,6 +97,11 @@ func unsubscribe(channelID string) (bool, error) {
 	return true, nil
 }
 
+func ubsubscribeBulk(chs []string) error {
+	err := db.Table("channels").Where("discord_id in ?", chs).Updates(map[string]interface{}{"active": false}).Error
+	return err
+}
+
 func touchFile(name string) error {
 	file, err := os.OpenFile(name, os.O_RDONLY|os.O_CREATE, 0644)
 	if err != nil {
