@@ -112,7 +112,6 @@ func touchFile(name string) error {
 }
 
 func getTodayBroadcastStatus() (bool, error) {
-	loc, _ := time.LoadLocation("Asia/Bangkok")
 	now := time.Now()
 	now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
 	str := now.Format(time.RFC3339)
@@ -128,7 +127,6 @@ func getTodayBroadcastStatus() (bool, error) {
 }
 
 func stampBroadcastDate() error {
-	loc, _ := time.LoadLocation("Asia/Bangkok")
 	now := time.Now()
 	now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
 	str := now.Format(time.RFC3339)

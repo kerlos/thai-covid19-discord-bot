@@ -27,6 +27,7 @@ type config struct {
 var cfg config
 var dgs []*discordgo.Session
 var ca *cache.Cache
+var loc *time.Location
 
 func init() {
 	viper.AddConfigPath(".")
@@ -41,7 +42,10 @@ func init() {
 	if err != nil {
 		log.Panic(err)
 	}
-
+	loc, err = time.LoadLocation("Asia/Bangkok")
+	if err != nil {
+		log.Panic(err)
+	}
 	initDb()
 }
 
@@ -75,15 +79,18 @@ func main() {
 	c := cron.New()
 	c.AddFunc("CRON_TZ=Asia/Bangkok 00 12 * * *", broadcast)
 	c.Start()
-
 	// Wait here until CTRL-C or other term signal is received.
 	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
-	broadcasted, err := getTodayBroadcastStatus()
-	if err != nil {
-		fmt.Printf("Error getting today broadcast status, skipping.\n")
-	}
-	if !broadcasted {
-		broadcast()
+	now := time.Now().In(loc)
+	noon := time.Date(now.Year(), now.Month(), now.Day(), 11, 59, 59, 0, loc)
+	if now.After(noon) {
+		broadcasted, err := getTodayBroadcastStatus()
+		if err != nil {
+			fmt.Printf("Error getting today broadcast status, skipping.\n")
+		}
+		if !broadcasted {
+			broadcast()
+		}
 	}
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)

@@ -1,13 +1,19 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
+	"github.com/golang/freetype/truetype"
+	"github.com/wcharczuk/go-chart"
+	"github.com/wcharczuk/go-chart/drawing"
 )
 
 var days = []string{
@@ -35,6 +41,8 @@ var months = []string{
 	"ธันวาคม",
 }
 
+const messageError = "เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง"
+
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
@@ -42,10 +50,14 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	content := strings.ToLower(m.Content)
 
-	if strings.HasPrefix(content, "/covid") {
+	if strings.HasPrefix(content, "/test") {
 		prms := strings.Split(content, " ")
 		if len(prms) == 1 || prms[1] == "today" {
+			msgData := &discordgo.MessageSend{}
 			var embed *discordgo.MessageEmbed
+			var file *bytes.Buffer
+			t := time.Now()
+			t = t.In(loc)
 			if embedCache, found := ca.Get("embed"); found {
 				embed = embedCache.(*discordgo.MessageEmbed)
 			}
@@ -53,19 +65,57 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			if embed == nil {
 				data, err := getData()
 				if err != nil {
-					s.ChannelMessageSend(m.ChannelID, "เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง")
+					s.ChannelMessageSend(m.ChannelID, messageError)
+					return
+				}
+				td, err := time.Parse("02/01/2006 15:04", data.UpdateDate)
+				if err != nil {
+					s.ChannelMessageSend(m.ChannelID, messageError)
 					return
 				}
 				embed, err = buildEmbed(data)
 				if err != nil {
-					s.ChannelMessageSend(m.ChannelID, "เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง")
+					s.ChannelMessageSend(m.ChannelID, messageError)
 					return
 				}
+				if imgCache, ok := ca.Get(fmt.Sprintf("chart-%s", td.Format("Jan2"))); ok {
+					embed.Image = imgCache.(*discordgo.MessageEmbedImage)
+				}
 
-				ca.Set("embed", embed, 30*time.Minute)
+				if embed.Image == nil {
+					file, err = buildChart()
+					if err != nil {
+						s.ChannelMessageSend(m.ChannelID, messageError)
+						return
+					}
+					chart := &discordgo.File{
+						Name:        fmt.Sprintf("covid-chart-%s.png", td.Format("20060102")),
+						ContentType: "image/png",
+						Reader:      file,
+					}
+					msgData.Files = append(msgData.Files, chart)
+					t = td
+				}
 			}
 
-			s.ChannelMessageSendEmbed(m.ChannelID, embed)
+			msgData.Embed = embed
+			resp, err := s.ChannelMessageSendComplex(m.ChannelID, msgData)
+			if err != nil {
+				return
+			}
+			if embed.Image == nil {
+				at := resp.Attachments[0]
+				embed.Image = &discordgo.MessageEmbedImage{
+					URL:      at.URL,
+					ProxyURL: at.ProxyURL,
+					Height:   at.Height,
+					Width:    at.Width,
+				}
+
+				ca.Set(fmt.Sprintf("chart-%s", t.Format("Jan2")), embed.Image, 36*time.Hour)
+				ca.Set("embed", embed, 30*time.Minute)
+				s.ChannelMessageEditEmbed(m.ChannelID, resp.ID, embed)
+			}
 		}
 
 		if len(prms) > 1 {
@@ -73,7 +123,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			case "sub", "subscribe":
 				_, err := subscribe(m.ChannelID)
 				if err != nil {
-					s.ChannelMessageSend(m.ChannelID, "เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง")
+					s.ChannelMessageSend(m.ChannelID, messageError)
 					return
 				}
 				/*
@@ -87,7 +137,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			case "unsub", "unsubscribe":
 				_, err := unsubscribe(m.ChannelID)
 				if err != nil {
-					s.ChannelMessageSend(m.ChannelID, "เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง")
+					s.ChannelMessageSend(m.ChannelID, messageError)
 					return
 				}
 				/*
@@ -110,11 +160,9 @@ func broadcastSubs() error {
 	if err != nil {
 		return err
 	}
-	loc, _ := time.LoadLocation("Asia/Bangkok")
-	now := time.Now()
-	now = now.In(loc)
+	now := time.Now().In(loc)
 	var data *covidData
-	delayNotice := true
+	//delayNotice := true
 	for {
 		data, err = getData()
 		if err != nil {
@@ -127,18 +175,12 @@ func broadcastSubs() error {
 		}
 
 		if dateEqual(t, now) {
+			now = t
 			break
 		}
 		fmt.Printf("broadcast data not update, retrying...\n")
-		if delayNotice {
-			for _, ch := range *chList {
-				shardID := getShardID(ch.DiscordID)
-				dgs[shardID].ChannelMessageSend(ch.DiscordID, "ข้อมูลจากกรมควบคุมโรคยังไม่มีข้อมูลใหม่ ระบบจะส่งข้อมูลอีกครั้งหลังจากได้รับข้อมูลใหม่แล้ว")
-				time.Sleep(100 * time.Millisecond)
-			}
-			delayNotice = false
-		}
 		time.Sleep(5 * time.Minute)
+
 	}
 
 	embed, err := buildEmbed(data)
@@ -146,14 +188,42 @@ func broadcastSubs() error {
 		return err
 	}
 
+	file, err := buildChart()
+	if err != nil {
+		return err
+	}
+
+	chart := &discordgo.File{
+		Name:        fmt.Sprintf("covid-chart-%s.png", now.Format("20060102")),
+		ContentType: "image/png",
+		Reader:      file,
+	}
+	msgData := &discordgo.MessageSend{
+		Embed: embed,
+	}
+	msgData.Files = append(msgData.Files, chart)
+
 	retriedList := make([]string, 0)
 	retriedCount := 1
 
 	for _, ch := range *chList {
 		shardID := getShardID(ch.DiscordID)
-		_, err = dgs[shardID].ChannelMessageSendEmbed(ch.DiscordID, embed)
+		resp, err := dgs[shardID].ChannelMessageSendComplex(ch.DiscordID, msgData)
 		if err != nil {
 			retriedList = append(retriedList, ch.DiscordID)
+		}
+
+		if embed.Image == nil {
+			at := resp.Attachments[0]
+			embed.Image = &discordgo.MessageEmbedImage{
+				URL:      at.URL,
+				ProxyURL: at.ProxyURL,
+				Height:   at.Height,
+				Width:    at.Width,
+			}
+			ca.Set(fmt.Sprintf("chart-%s", now.Format("Jan2")), embed.Image, 36*time.Hour)
+			ca.Set("embed", embed, 30*time.Minute)
+			dgs[shardID].ChannelMessageEditEmbed(ch.DiscordID, resp.ID, embed)
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
@@ -181,8 +251,7 @@ func broadcastSubs() error {
 			break
 		}
 	}
-	now = time.Now()
-	now = now.In(loc)
+	now = time.Now().In(loc)
 	fmt.Printf("finished broadcast at %s\n", now.Format(time.Stamp))
 	err = stampBroadcastDate()
 	if err != nil {
@@ -275,4 +344,128 @@ func getShardID(channelID string) int {
 	}
 	shardID := (gid >> 22) % uint64(cfg.ShardCount)
 	return int(shardID)
+}
+
+func buildChart() (*bytes.Buffer, error) {
+	data, err := getChartData()
+	if err != nil {
+		return nil, err
+	}
+
+	dlen := len(data.Data) - 30
+	if dlen < 0 {
+		dlen = 0
+	}
+
+	ttfData, err := ioutil.ReadFile("font/Kanit-Medium.ttf")
+	if err != nil {
+		log.Fatal(err)
+	}
+	f, err := truetype.Parse(ttfData)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	dt := data.Data[dlen:]
+	dlen = len(dt)
+	ticks := make([]chart.Tick, dlen)
+	max := 0
+	c := chart.ContinuousSeries{
+		Name:    "ติดเชื้อสะสม",
+		XValues: make([]float64, dlen),
+		YValues: make([]float64, dlen),
+		Style: chart.Style{
+			StrokeColor: drawing.ColorFromHex("e1298e"),
+			FillColor:   drawing.ColorFromHex("e1298e").WithAlpha(32),
+			Show:        true,
+		},
+	}
+	d := chart.ContinuousSeries{
+		Name:    "เสียชีวิต",
+		XValues: make([]float64, dlen),
+		YValues: make([]float64, dlen),
+		Style: chart.Style{
+			StrokeColor: drawing.ColorBlack,
+			FillColor:   drawing.ColorBlack.WithAlpha(32),
+			Show:        true,
+		},
+	}
+	r := chart.ContinuousSeries{
+		Name:    "หายแล้ว",
+		XValues: make([]float64, dlen),
+		YValues: make([]float64, dlen),
+		Style: chart.Style{
+			StrokeColor: drawing.ColorFromHex("046034"),
+			FillColor:   drawing.ColorFromHex("046034").WithAlpha(32),
+			Show:        true,
+		},
+	}
+	h := chart.ContinuousSeries{
+		Name:    "รักษาอยู่ใน รพ.",
+		XValues: make([]float64, dlen),
+		YValues: make([]float64, dlen),
+		Style: chart.Style{
+			StrokeColor: drawing.ColorFromHex("179c9b"),
+			FillColor:   drawing.ColorFromHex("179c9b").WithAlpha(32),
+			Show:        true,
+		},
+	}
+	for i, v := range dt {
+		t, err := time.Parse("01/02/2006", dt[i].Date)
+		if err != nil {
+			return nil, err
+		}
+		xv := float64(t.Unix())
+		ticks[i] = chart.Tick{Value: xv}
+		if (i+1)%5 == 0 || i == 0 {
+			ticks[i].Label = fmt.Sprintf("%v %s", t.Day(), months[t.Month()-1])
+		}
+		c.XValues[i] = xv
+		d.XValues[i] = xv
+		r.XValues[i] = xv
+		h.XValues[i] = xv
+
+		c.YValues[i] = float64(v.Confirmed)
+		d.YValues[i] = float64(v.Deaths)
+		r.YValues[i] = float64(v.Recovered)
+		h.YValues[i] = float64(v.Hospitalized)
+
+		if v.Confirmed > max {
+			max = v.Confirmed
+		}
+	}
+	graph := chart.Chart{
+		Font:   f,
+		Height: 300,
+		Width:  600,
+		XAxis: chart.XAxis{
+			Ticks: ticks,
+			Style: chart.StyleShow(),
+		},
+		YAxis: chart.YAxis{
+			Range: &chart.ContinuousRange{
+				Min: 0.0,
+				Max: float64(max),
+			},
+			Style: chart.StyleShow(),
+			ValueFormatter: func(v interface{}) string {
+				if vf, isFloat := v.(float64); isFloat {
+					return fmt.Sprintf("%s", humanize.Comma(int64(vf)))
+				}
+				return ""
+			},
+		},
+		Series: []chart.Series{c, d, r, h},
+	}
+	graph.Elements = []chart.Renderable{
+		chart.Legend(&graph),
+	}
+	buf := new(bytes.Buffer)
+
+	err = graph.Render(chart.PNG, buf)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+	return buf, nil
 }
