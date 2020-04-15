@@ -98,7 +98,7 @@ func unsubscribe(channelID string) (bool, error) {
 }
 
 func ubsubscribeBulk(chs []string) error {
-	err := db.Table("channels").Where("discord_id in ?", chs).Updates(map[string]interface{}{"active": false}).Error
+	err := db.Table("channels").Where("discord_id in (?)", chs).Updates(map[string]interface{}{"active": false}).Error
 	return err
 }
 
