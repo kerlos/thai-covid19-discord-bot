@@ -224,6 +224,9 @@ func broadcastSubs() error {
 			ca.Set(fmt.Sprintf("chart-%s", now.Format("Jan2")), embed.Image, 36*time.Hour)
 			ca.Set("embed", embed, 30*time.Minute)
 			dgs[shardID].ChannelMessageEditEmbed(ch.DiscordID, resp.ID, embed)
+			msgData = &discordgo.MessageSend{
+				Embed: embed,
+			}
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
