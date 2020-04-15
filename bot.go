@@ -50,7 +50,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	content := strings.ToLower(m.Content)
 
-	if strings.HasPrefix(content, "/test") {
+	if strings.HasPrefix(content, "/covid") {
 		prms := strings.Split(content, " ")
 		if len(prms) == 1 || prms[1] == "today" {
 			msgData := &discordgo.MessageSend{}
