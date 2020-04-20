@@ -527,6 +527,9 @@ func checkReactionAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
 	if m.UserID == s.State.User.ID {
 		return
 	}
+	if len(m.GuildID) > 0 {
+		return
+	}
 	val := 2
 	if m.Emoji.Name == "✅" {
 		val = 1
@@ -538,6 +541,9 @@ func checkReactionAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
 
 func checkReactionRemove(s *discordgo.Session, m *discordgo.MessageReactionRemove) {
 	if m.UserID == s.State.User.ID {
+		return
+	}
+	if len(m.GuildID) > 0 {
 		return
 	}
 	val := 2
@@ -556,7 +562,7 @@ func checkUpdateEmbed(s *discordgo.Session, chID, msgID string, val int) {
 		s.ChannelMessageSend(chID, err.Error())
 	}
 
-	if len(msg.Embeds) > 0 && val != 2 {
+	if msg != nil && msg.Embeds != nil && len(msg.Embeds) > 0 && val != 2 {
 		embed := msg.Embeds[0]
 		if embed.Title == "ตรวจระดับความเสี่ยงและคำแนะนำในการปฏิบัติตน COVID19" {
 			u, _ := url.Parse(embed.URL)
