@@ -4,10 +4,11 @@
   
 พิมพ์ `/covid` เพื่อดูรายงานปัจจุบัน  
 พิมพ์ `/covid sub` เพื่อติดตามข่าวอัตโนมัติทุกวันเวลา 12.00 น.  
-พิมพ์ `/covid unsub` เพื่อยกเลิกการติดตามข่าว  
+พิมพ์ `/covid unsub` เพื่อยกเลิกการติดตามข่าว
+พิมพ์ `/covid check` เพื่อทำแบบประเมิณความเสี่ยง
 
-![](http://i.imgur.com/hXxXW1h.png)
-
+![](https://i.imgur.com/tFmjzuo.png)
+![](https://i.imgur.com/WLTMQ5f.png)
 ## วิธีใช้
 สามารถเชิญบอทเข้า Discord Server ได้จาก link
 
