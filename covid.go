@@ -40,9 +40,27 @@ type (
 			Deaths          int    `json:"Deaths"`
 		} `json:"Data"`
 	}
+
+	checkResult struct {
+		Index             int    `json:"index"`
+		Fever             int    `json:"fever"`
+		OneURISymp        int    `json:"one_uri_symp"`
+		TravelRiskCountry int    `json:"travel_risk_country"`
+		Covid19Contact    int    `json:"covid19_contact"`
+		CloseRiskCountry  int    `json:"close_risk_country"`
+		CloseRiskLocation int    `json:"close_risk_location"`
+		IntContact        int    `json:"int_contact"`
+		MedProf           int    `json:"med_prof"`
+		CloseCon          int    `json:"close_con"`
+		RiskLevel         int    `json:"risk_level"`
+		GenAction         string `json:"gen_action"`
+		SpecAction        string `json:"spec_action"`
+	}
 )
 
 const apiURL = "https://covid19.th-stat.com/api/open"
+
+var checkResults []checkResult
 
 func getData() (*covidData, error) {
 	retryCount := 0

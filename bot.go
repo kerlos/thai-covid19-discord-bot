@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -16,32 +17,44 @@ import (
 	"github.com/wcharczuk/go-chart/drawing"
 )
 
-var days = []string{
-	"อาทิตย์",
-	"จันทร์",
-	"อังคาร",
-	"พุธ",
-	"พฤหัสบดี",
-	"ศุกร์",
-	"เสาร์",
-}
+var (
+	days = []string{
+		"อาทิตย์",
+		"จันทร์",
+		"อังคาร",
+		"พุธ",
+		"พฤหัสบดี",
+		"ศุกร์",
+		"เสาร์",
+	}
 
-var months = []string{
-	"มกราคม",
-	"กุมภาพันธ์",
-	"มีนาคม",
-	"เมษายน",
-	"พฤษภาคม",
-	"มิถุนายน",
-	"กรกฎาคม",
-	"สิงหาคม",
-	"กันยายน",
-	"ตุลาคม",
-	"พฤษจิกายน",
-	"ธันวาคม",
-}
+	months = []string{
+		"มกราคม",
+		"กุมภาพันธ์",
+		"มีนาคม",
+		"เมษายน",
+		"พฤษภาคม",
+		"มิถุนายน",
+		"กรกฎาคม",
+		"สิงหาคม",
+		"กันยายน",
+		"ตุลาคม",
+		"พฤษจิกายน",
+		"ธันวาคม",
+	}
 
-const messageError = "เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง"
+	riskLevels = []string{
+		"ความเสี่ยงต่ำ",
+		"ความเสียงปานกลาง",
+		"ความเสียงสูง",
+		"ความเสียงสูงมาก",
+	}
+)
+
+const (
+	messageError = "เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง"
+	helpMsg      = "พิมพ์ \"/covid\" เพื่อดูรายงานปัจจุบัน\nพิมพ์ \"/covid sub\" เพื่อติดตามข่าวอัตโนมัติทุกวันเวลา 12.00 น.\nพิมพ์ \"/covid unsub\" เพื่อยกเลิกการติดตามข่าว\nพิมพ์ \"/covid check\" เพื่อทดสอบแบบประเมิณความเสี่ยง"
+)
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
@@ -148,9 +161,23 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				s.ChannelMessageSend(m.ChannelID, "ยกเลิกการติดตามข่าวเรียบร้อย")
 				break
 			case "help":
-				s.ChannelMessageSend(m.ChannelID, "พิมพ์ `/covid` เพื่อดูรายงานปัจจุบัน\nพิมพ์ `/covid sub` เพื่อติดตามข่าวอัตโนมัติทุกวันเวลา 12.00 น.\nพิมพ์ `/covid unsub` เพื่อยกเลิกการติดตามข่าว")
+				s.ChannelMessageSend(m.ChannelID, helpMsg)
+				break
+			case "check":
+				if len(m.GuildID) > 0 {
+					s.ChannelMessageSend(m.ChannelID, "แบบสอบถามใช้ได้เฉพาะการส่งข้อความหาบอทโดยตรงเท่านั้น")
+				} else {
+					err := startCheck(m.ChannelID)
+					if err != nil {
+						s.ChannelMessageSend(m.ChannelID, err.Error())
+					}
+				}
+				break
+			default:
+				s.ChannelMessageSend(m.ChannelID, helpMsg)
 				break
 			}
+
 		}
 	}
 }
@@ -471,4 +498,194 @@ func buildChart() (*bytes.Buffer, error) {
 		return nil, err
 	}
 	return buf, nil
+}
+
+func startCheck(channelID string) error {
+	embed := &discordgo.MessageEmbed{
+		Title:       "ตรวจระดับความเสี่ยงและคำแนะนำในการปฏิบัติตน COVID19",
+		Color:       16721136,
+		URL:         "https://covid19.th-stat.com/th/self_screening?ans=",
+		Description: "ข้อ 1/8\nผู้ป่วยมีอุณหภูมิกายตั้งแต่ 37.5 องศาขึ้นไป หรือ รู้สึกว่ามีไข้",
+	}
+	msg, err := dgs[0].ChannelMessageSendEmbed(channelID, embed)
+	if err != nil {
+		return err
+	}
+	err = dgs[0].MessageReactionAdd(channelID, msg.ID, "✅")
+	if err != nil {
+		return err
+	}
+	err = dgs[0].MessageReactionAdd(channelID, msg.ID, "❌")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func checkReactionAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
+	if m.UserID == s.State.User.ID {
+		return
+	}
+	val := 2
+	if m.Emoji.Name == "✅" {
+		val = 1
+	} else if m.Emoji.Name == "❌" {
+		val = 0
+	}
+	checkUpdateEmbed(s, m.ChannelID, m.MessageID, val)
+}
+
+func checkReactionRemove(s *discordgo.Session, m *discordgo.MessageReactionRemove) {
+	if m.UserID == s.State.User.ID {
+		return
+	}
+	val := 2
+	if m.Emoji.Name == "✅" {
+		val = 1
+	} else if m.Emoji.Name == "❌" {
+		val = 0
+	}
+	checkUpdateEmbed(s, m.ChannelID, m.MessageID, val)
+}
+
+func checkUpdateEmbed(s *discordgo.Session, chID, msgID string, val int) {
+
+	msg, err := s.ChannelMessage(chID, msgID)
+	if err != nil {
+		s.ChannelMessageSend(chID, err.Error())
+	}
+
+	if len(msg.Embeds) > 0 && val != 2 {
+		embed := msg.Embeds[0]
+		if embed.Title == "ตรวจระดับความเสี่ยงและคำแนะนำในการปฏิบัติตน COVID19" {
+			u, _ := url.Parse(embed.URL)
+			q, _ := url.ParseQuery(u.RawQuery)
+			ansq := q.Get("ans")
+			ansStr := strings.Split(ansq, ",")
+			var al int
+			if len(ansq) == 0 {
+				al = 0
+				embed.URL += fmt.Sprintf("%v", val)
+			} else {
+				al = len(ansStr)
+				embed.URL += fmt.Sprintf(",%v", val)
+			}
+			switch al {
+			case 0:
+				embed.Description = "ข้อ 2/8\nผู้ป่วยมีอาการระบบทางเดินหายใจ อย่างใดอย่างหนึ่งดังต่อไปนี้ \"ไอ น้ำมูก เจ็บคอ หายใจเหนื่อย หรือหายใจลำบาก\""
+				break
+			case 1:
+				embed.Description = "ข้อ 3/8\nผู้ป่วยมีประวัติเดินทางไปยัง หรือ มาจาก หรือ อาศัยอยู่ในพื้นที่เกิดโรค COVID-19 ในช่วงเวลา 14 วัน ก่อนป่วย"
+				break
+			case 2:
+				embed.Description = "ข้อ 4/8\nอยู่ใกล้ชิดกับผู้ป่วยยืนยัน COVID-19 (ใกล้กว่า 1 เมตร นานเกิน 5 นาที) ในช่วง 14 วันก่อน"
+				break
+			case 3:
+				embed.Description = "ข้อ 5/8\nมีประวัติไปสถานที่ชุมนุมชน หรือสถานที่ที่มีการรวมกลุ่มคน เช่น ตลาดนัด ห้างสรรพสินค้า สถานพยาบาล หรือ ขนส่งสาธารณะ"
+				break
+			case 4:
+				embed.Description = "ข้อ 6/8\nผู้ป่วยประกอบอาชีพที่สัมผัสใกล้ชิดกับนักท่องเที่ยวต่างชาติ สถานที่แออัด หรือติดต่อคนจำนวนมาก"
+				break
+			case 5:
+				embed.Description = "ข้อ 7/8\nเป็นบุคลากรทางการแพทย์"
+				break
+			case 6:
+				embed.Description = "ข้อ 8/8\nมีผู้ใกล้ชิดป่วยเป็นไข้หวัดพร้อมกัน มากกว่า 5 คน ในช่วงสัปดาห์ที่ป่วย"
+				break
+			case 7:
+				ans := make([]int, len(ansStr))
+				for i, v := range ansStr {
+					ans[i], err = strconv.Atoi(v)
+					if err != nil {
+						s.ChannelMessageSend(chID, "เกิดข้อผิดพลาด โปรดทำแบบสอบถามใหม่อีกครั้ง")
+						return
+					}
+				}
+				found := false
+				for _, v := range checkResults {
+					if v.Fever == ans[0] &&
+						v.OneURISymp == ans[1] &&
+						v.TravelRiskCountry == ans[2] &&
+						v.Covid19Contact == ans[3] &&
+						(v.CloseRiskCountry == ans[4] || v.CloseRiskLocation == ans[4]) &&
+						v.IntContact == ans[5] &&
+						v.MedProf == ans[6] &&
+						v.CloseCon == val {
+						found = true
+						embed.Description = "ผลการทดสอบ"
+						embed.Fields = []*discordgo.MessageEmbedField{
+							{
+								Name:  "ระดับความเสี่ยง",
+								Value: riskLevels[v.RiskLevel-1],
+							},
+							{
+								Name:  "คำแนะนำเบื้องต้น",
+								Value: v.GenAction,
+							},
+						}
+						if len(v.SpecAction) > 0 {
+							embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+								Name:  "คำแนะนำแบบเจาะจง",
+								Value: v.SpecAction,
+							})
+						}
+						break
+					}
+				}
+				if found {
+					_, err = s.ChannelMessageEditEmbed(chID, msg.ID, embed)
+					if err != nil {
+						s.ChannelMessageSend(chID, "เกิดข้อผิดพลาด โปรดทำแบบสอบถามใหม่อีกครั้ง")
+						return
+					}
+				} else {
+					// default answer
+					v := searchResult(177)
+					found = true
+					embed.Description = "ผลการทดสอบ"
+					embed.Fields = []*discordgo.MessageEmbedField{
+						{
+							Name:  "ระดับความเสี่ยง",
+							Value: riskLevels[v.RiskLevel-1],
+						},
+						{
+							Name:  "คำแนะนำเบื้องต้น",
+							Value: v.GenAction,
+						},
+					}
+					if len(v.SpecAction) > 0 {
+						embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+							Name:  "คำแนะนำแบบเจาะจง",
+							Value: v.SpecAction,
+						})
+					}
+					_, err = s.ChannelMessageEditEmbed(chID, msg.ID, embed)
+					if err != nil {
+						s.ChannelMessageSend(chID, "เกิดข้อผิดพลาด โปรดทำแบบสอบถามใหม่อีกครั้ง")
+						return
+					}
+				}
+				return
+			case 8:
+				return
+			default:
+				return
+			}
+			_, err = s.ChannelMessageEditEmbed(chID, msg.ID, embed)
+			if err != nil {
+				s.ChannelMessageSend(chID, "เกิดข้อผิดพลาด โปรดทำแบบสอบถามใหม่อีกครั้ง")
+				return
+			}
+		}
+	}
+}
+
+func searchResult(idx int) *checkResult {
+	for _, v := range checkResults {
+		if v.Index == idx {
+			return &v
+		}
+	}
+	return nil
 }
