@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/blend/go-sdk v2.0.0+incompatible // indirect
 	github.com/bwmarrin/discordgo v0.20.2
+	github.com/coreos/etcd v3.3.13+incompatible
 	github.com/dustin/go-humanize v1.0.0
 	github.com/goki/freetype v0.0.0-20181231101311-fa8a33aabaff
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0

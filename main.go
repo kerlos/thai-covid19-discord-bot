@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
@@ -47,6 +49,16 @@ func init() {
 		log.Panic(err)
 	}
 	initDb()
+
+	checkContent, err := ioutil.ReadFile("covid19_check_result.json")
+	if err != nil {
+		log.Panic(err)
+	}
+
+	err = json.Unmarshal(checkContent, &checkResults)
+	if err != nil {
+		log.Panic(err)
+	}
 }
 
 func main() {
@@ -66,6 +78,8 @@ func main() {
 		dg.AddHandler(messageCreate)
 		dgs = append(dgs, dg)
 	}
+	dgs[0].AddHandler(checkReactionAdd)
+	dgs[0].AddHandler(checkReactionRemove)
 
 	// Open a websocket connection to Discord and begin listening.
 	for i, dg := range dgs {
@@ -81,17 +95,18 @@ func main() {
 	c.Start()
 	// Wait here until CTRL-C or other term signal is received.
 	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
-	now := time.Now().In(loc)
-	noon := time.Date(now.Year(), now.Month(), now.Day(), 11, 59, 59, 0, loc)
-	if now.After(noon) {
-		broadcasted, err := getTodayBroadcastStatus()
-		if err != nil {
-			fmt.Printf("Error getting today broadcast status, skipping.\n")
-		}
-		if !broadcasted {
-			broadcast()
-		}
-	}
+	/*
+		now := time.Now().In(loc)
+		noon := time.Date(now.Year(), now.Month(), now.Day(), 11, 59, 59, 0, loc)
+		if now.After(noon) {
+			broadcasted, err := getTodayBroadcastStatus()
+			if err != nil {
+				fmt.Printf("Error getting today broadcast status, skipping.\n")
+			}
+			if !broadcasted {
+				broadcast()
+			}
+		}*/
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
