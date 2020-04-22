@@ -98,6 +98,10 @@ func getData() (*covidData, error) {
 			retryCount++
 			continue
 		}
+		if data.Confirmed == 0 {
+			retryCount++
+			continue
+		}
 		return &data, nil
 	}
 }
