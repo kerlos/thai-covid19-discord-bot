@@ -10,35 +10,21 @@ import (
 
 type (
 	covidData struct {
-		Confirmed       int    `json:"Confirmed"`
-		Recovered       int    `json:"Recovered"`
-		Hospitalized    int    `json:"Hospitalized"`
-		Deaths          int    `json:"Deaths"`
-		NewConfirmed    int    `json:"NewConfirmed"`
-		NewRecovered    int    `json:"NewRecovered"`
-		NewHospitalized int    `json:"NewHospitalized"`
-		NewDeaths       int    `json:"NewDeaths"`
-		UpdateDate      string `json:"UpdateDate"`
-		Source          string `json:"Source"`
-		DevBy           string `json:"DevBy"`
-		SeverBy         string `json:"SeverBy"`
+		Cases          int   `json:"cases"`
+		Recovered      int   `json:"recovered"`
+		Active         int   `json:"active"`
+		Deaths         int   `json:"deaths"`
+		TodayCases     int   `json:"todayCases"`
+		TodayRecovered int   `json:"todayRecovered"`
+		TodayDeaths    int   `json:"todayDeaths"`
+		Updated        int64 `json:"updated"`
 	}
 	chartData struct {
-		UpdateDate string `json:"UpdateDate"`
-		Source     string `json:"Source"`
-		DevBy      string `json:"DevBy"`
-		SeverBy    string `json:"SeverBy"`
-		Data       []struct {
-			Date            string `json:"Date"`
-			NewConfirmed    int    `json:"NewConfirmed"`
-			NewRecovered    int    `json:"NewRecovered"`
-			NewHospitalized int    `json:"NewHospitalized"`
-			NewDeaths       int    `json:"NewDeaths"`
-			Confirmed       int    `json:"Confirmed"`
-			Recovered       int    `json:"Recovered"`
-			Hospitalized    int    `json:"Hospitalized"`
-			Deaths          int    `json:"Deaths"`
-		} `json:"Data"`
+		Timeline struct {
+			Cases     map[string]int `json:"cases"`
+			Deaths    map[string]int `json:"deaths"`
+			Recovered map[string]int `json:"recovered"`
+		} `json:"timeline"`
 	}
 
 	checkResult struct {
@@ -58,7 +44,7 @@ type (
 	}
 )
 
-const apiURL = "https://covid19.th-stat.com/api/open"
+const apiURL = "https://disease.sh/v3/covid-19"
 
 var checkResults []checkResult
 
@@ -73,7 +59,7 @@ func getData() (*covidData, error) {
 		}
 		cl := http.Client{}
 
-		req, err := http.NewRequest("GET", fmt.Sprintf("%s/today", apiURL), nil)
+		req, err := http.NewRequest("GET", fmt.Sprintf("%s/countries/thailand", apiURL), nil)
 		if err != nil {
 			retryCount++
 			continue
@@ -98,7 +84,7 @@ func getData() (*covidData, error) {
 			retryCount++
 			continue
 		}
-		if data.Confirmed == 0 {
+		if data.Cases == 0 {
 			retryCount++
 			continue
 		}
@@ -117,7 +103,7 @@ func getChartData() (*chartData, error) {
 		}
 		cl := http.Client{}
 
-		req, err := http.NewRequest("GET", fmt.Sprintf("%s/timeline", apiURL), nil)
+		req, err := http.NewRequest("GET", fmt.Sprintf("%s/historical/th?lastdays=30", apiURL), nil)
 		if err != nil {
 			retryCount++
 			continue

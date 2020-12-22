@@ -60,6 +60,9 @@ func subscribe(channelID string) (bool, error) {
 			Active:    true,
 		}
 		err = db.Create(&ch).Error
+		if err != nil {
+			return false, err
+		}
 		return true, nil
 	}
 
@@ -83,7 +86,7 @@ func unsubscribe(channelID string) (bool, error) {
 		return false, err
 	}
 
-	if ch.ID == 0 || ch.Active == false {
+	if ch.ID == 0 || !ch.Active {
 		return false, nil
 	}
 
