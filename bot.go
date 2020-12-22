@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -81,11 +82,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					s.ChannelMessageSend(m.ChannelID, messageError)
 					return
 				}
-				td, err := time.Parse("02/01/2006 15:04", data.UpdateDate)
-				if err != nil {
-					s.ChannelMessageSend(m.ChannelID, messageError)
-					return
-				}
+				td := time.Unix(data.Updated/1000, 0).In(loc)
 				embed, err = buildEmbed(data)
 				if err != nil {
 					s.ChannelMessageSend(m.ChannelID, messageError)
@@ -145,7 +142,6 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					}*/
 
 				s.ChannelMessageSend(m.ChannelID, "ติดตามข่าวเรียบร้อย")
-				break
 
 			case "unsub", "unsubscribe":
 				_, err := unsubscribe(m.ChannelID)
@@ -159,10 +155,8 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					}*/
 
 				s.ChannelMessageSend(m.ChannelID, "ยกเลิกการติดตามข่าวเรียบร้อย")
-				break
 			case "help":
 				s.ChannelMessageSend(m.ChannelID, helpMsg)
-				break
 			case "check":
 				if len(m.GuildID) > 0 {
 					s.ChannelMessageSend(m.ChannelID, "แบบสอบถามใช้ได้เฉพาะการส่งข้อความหาบอทโดยตรงเท่านั้น")
@@ -172,17 +166,15 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 						s.ChannelMessageSend(m.ChannelID, err.Error())
 					}
 				}
-				break
 			default:
 				s.ChannelMessageSend(m.ChannelID, helpMsg)
-				break
 			}
 
 		}
 	}
 }
 
-func broadcastSubs() error {
+func broadcastSubs() (err error) {
 	chList, err := getSubs()
 	if err != nil {
 		return err
@@ -190,24 +182,10 @@ func broadcastSubs() error {
 	now := time.Now().In(loc)
 	var data *covidData
 	//delayNotice := true
-	for {
-		data, err = getData()
-		if err != nil {
-			return err
-		}
+	data, err = getData()
+	if err != nil {
 
-		t, err := time.Parse("02/01/2006 15:04", data.UpdateDate)
-		if err != nil {
-			return err
-		}
-
-		if dateEqual(t, now) {
-			now = t
-			break
-		}
-		fmt.Printf("broadcast data not update, retrying...\n")
-		time.Sleep(5 * time.Minute)
-
+		return err
 	}
 
 	embed, err := buildEmbed(data)
@@ -298,10 +276,7 @@ func currentDateTH(t time.Time) string {
 }
 
 func buildEmbed(data *covidData) (*discordgo.MessageEmbed, error) {
-	t, err := time.Parse("02/01/2006 15:04", data.UpdateDate)
-	if err != nil {
-		return nil, err
-	}
+	t := time.Unix(data.Updated/1000, 0).In(loc)
 	embed := discordgo.MessageEmbed{
 		Title: "รายงานสถานการณ์ โควิด-19 ในประเทศไทย",
 		/*
@@ -311,47 +286,47 @@ func buildEmbed(data *covidData) (*discordgo.MessageEmbed, error) {
 				URL:     cfg.Author.URL,
 			},*/
 
-		Description: fmt.Sprintf("%s", currentDateTH(t)),
+		Description: currentDateTH(t),
 		Color:       16721136,
 		Provider: &discordgo.MessageEmbedProvider{
-			Name: "กรมควบคุมโรค",
-			URL:  "http://covid19.ddc.moph.go.th/",
+			Name: "disease.sh",
+			URL:  "https://disease.sh/",
 		},
 		Fields: []*discordgo.MessageEmbedField{
 			{
 				Name:   "🤒 ติดเชื้อสะสม",
-				Value:  fmt.Sprintf("%s (เพิ่มขึ้น %s)", humanize.Comma(int64(data.Confirmed)), humanize.Comma(int64(data.NewConfirmed))),
+				Value:  fmt.Sprintf("%s (เพิ่มขึ้น %s)", humanize.Comma(int64(data.Cases)), humanize.Comma(int64(data.TodayCases))),
 				Inline: true,
 			},
 			{
 				Name:   "💀 เสียชีวิต",
-				Value:  fmt.Sprintf("%s (เพิ่มขึ้น %s)", humanize.Comma(int64(data.Deaths)), humanize.Comma(int64(data.NewDeaths))),
+				Value:  fmt.Sprintf("%s (เพิ่มขึ้น %s)", humanize.Comma(int64(data.Deaths)), humanize.Comma(int64(data.TodayDeaths))),
 				Inline: true,
 			},
 			{
 				Name:   "💪 หายแล้ว",
-				Value:  fmt.Sprintf("%s (เพิ่มขึ้น %s)", humanize.Comma(int64(data.Recovered)), humanize.Comma(int64(data.NewRecovered))),
+				Value:  fmt.Sprintf("%s (เพิ่มขึ้น %s)", humanize.Comma(int64(data.Recovered)), humanize.Comma(int64(data.TodayRecovered))),
 				Inline: true,
 			},
 			{
 				Name:   "🏥 รักษาอยู่ใน รพ.",
-				Value:  fmt.Sprintf("%s", humanize.Comma(int64(data.Hospitalized))),
+				Value:  humanize.Comma(int64(data.Active)),
 				Inline: true,
 			},
 			{
 				Name:   "🟥 อัตราการเสียชีวิต",
-				Value:  fmt.Sprintf("%.2f%%", (float64(data.Deaths)/float64(data.Confirmed))*100),
+				Value:  fmt.Sprintf("%.2f%%", (float64(data.Deaths)/float64(data.Cases))*100),
 				Inline: true,
 			},
 			{
 				Name:   "🟩 อัตราการหาย",
-				Value:  fmt.Sprintf("%.2f%%", (float64(data.Recovered)/float64(data.Confirmed))*100),
+				Value:  fmt.Sprintf("%.2f%%", (float64(data.Recovered)/float64(data.Cases))*100),
 				Inline: true,
 			},
 		},
-		URL: "https://covid19.ddc.moph.go.th/",
+		URL: "https://disease.sh/",
 		Footer: &discordgo.MessageEmbedFooter{
-			Text: fmt.Sprintf("ข้อมูลโดย กรมควบคุมโรค\nบอทโดย %s\n%s", cfg.Author.Name, cfg.Author.URL),
+			Text: fmt.Sprintf("ข้อมูลจาก disease.sh\nบอทโดย %s\n%s", cfg.Author.Name, cfg.Author.URL),
 		},
 	}
 
@@ -377,14 +352,9 @@ func getShardID(channelID string) int {
 }
 
 func buildChart() (*bytes.Buffer, error) {
-	data, err := getChartData()
+	dt, err := getChartData()
 	if err != nil {
 		return nil, err
-	}
-
-	dlen := len(data.Data) - 30
-	if dlen < 0 {
-		dlen = 0
 	}
 
 	ttfData, err := ioutil.ReadFile("font/Kanit-Medium.ttf")
@@ -396,8 +366,7 @@ func buildChart() (*bytes.Buffer, error) {
 		log.Fatal(err)
 	}
 
-	dt := data.Data[dlen:]
-	dlen = len(dt)
+	dlen := len(dt.Timeline.Cases)
 	ticks := make([]chart.Tick, dlen)
 	max := 0
 	c := chart.ContinuousSeries{
@@ -430,21 +399,21 @@ func buildChart() (*bytes.Buffer, error) {
 			Show:        true,
 		},
 	}
-	h := chart.ContinuousSeries{
-		Name:    "รักษาอยู่ใน รพ.",
-		XValues: make([]float64, dlen),
-		YValues: make([]float64, dlen),
-		Style: chart.Style{
-			StrokeColor: drawing.ColorFromHex("179c9b"),
-			FillColor:   drawing.ColorFromHex("179c9b").WithAlpha(32),
-			Show:        true,
-		},
-	}
-	for i, v := range dt {
-		t, err := time.Parse("01/02/2006", dt[i].Date)
+	dates := make([]time.Time, 0, len(dt.Timeline.Cases))
+	for k := range dt.Timeline.Cases {
+		t, err := time.Parse("1/2/06", k)
 		if err != nil {
 			return nil, err
 		}
+
+		dates = append(dates, t)
+	}
+	sort.Slice(dates, func(i, j int) bool {
+		return dates[i].Before(dates[j])
+	})
+
+	for i, t := range dates {
+		k := t.Format("1/2/06")
 		xv := float64(t.Unix())
 		ticks[i] = chart.Tick{Value: xv}
 		if (i+1)%5 == 0 || i == 0 {
@@ -453,15 +422,13 @@ func buildChart() (*bytes.Buffer, error) {
 		c.XValues[i] = xv
 		d.XValues[i] = xv
 		r.XValues[i] = xv
-		h.XValues[i] = xv
 
-		c.YValues[i] = float64(v.Confirmed)
-		d.YValues[i] = float64(v.Deaths)
-		r.YValues[i] = float64(v.Recovered)
-		h.YValues[i] = float64(v.Hospitalized)
+		c.YValues[i] = float64(dt.Timeline.Cases[k])
+		d.YValues[i] = float64(dt.Timeline.Deaths[k])
+		r.YValues[i] = float64(dt.Timeline.Recovered[k])
 
-		if v.Confirmed > max {
-			max = v.Confirmed
+		if dt.Timeline.Cases[k] > max {
+			max = dt.Timeline.Cases[k]
 		}
 	}
 	graph := chart.Chart{
@@ -480,12 +447,12 @@ func buildChart() (*bytes.Buffer, error) {
 			Style: chart.StyleShow(),
 			ValueFormatter: func(v interface{}) string {
 				if vf, isFloat := v.(float64); isFloat {
-					return fmt.Sprintf("%s", humanize.Comma(int64(vf)))
+					return humanize.Comma(int64(vf))
 				}
 				return ""
 			},
 		},
-		Series: []chart.Series{c, d, r, h},
+		Series: []chart.Series{c, d, r},
 	}
 	graph.Elements = []chart.Renderable{
 		chart.Legend(&graph),
@@ -580,25 +547,18 @@ func checkUpdateEmbed(s *discordgo.Session, chID, msgID string, val int) {
 			switch al {
 			case 0:
 				embed.Description = "ข้อ 2/8\nผู้ป่วยมีอาการระบบทางเดินหายใจ อย่างใดอย่างหนึ่งดังต่อไปนี้ \"ไอ น้ำมูก เจ็บคอ หายใจเหนื่อย หรือหายใจลำบาก\""
-				break
 			case 1:
 				embed.Description = "ข้อ 3/8\nผู้ป่วยมีประวัติเดินทางไปยัง หรือ มาจาก หรือ อาศัยอยู่ในพื้นที่เกิดโรค COVID-19 ในช่วงเวลา 14 วัน ก่อนป่วย"
-				break
 			case 2:
 				embed.Description = "ข้อ 4/8\nอยู่ใกล้ชิดกับผู้ป่วยยืนยัน COVID-19 (ใกล้กว่า 1 เมตร นานเกิน 5 นาที) ในช่วง 14 วันก่อน"
-				break
 			case 3:
 				embed.Description = "ข้อ 5/8\nมีประวัติไปสถานที่ชุมนุมชน หรือสถานที่ที่มีการรวมกลุ่มคน เช่น ตลาดนัด ห้างสรรพสินค้า สถานพยาบาล หรือ ขนส่งสาธารณะ"
-				break
 			case 4:
 				embed.Description = "ข้อ 6/8\nผู้ป่วยประกอบอาชีพที่สัมผัสใกล้ชิดกับนักท่องเที่ยวต่างชาติ สถานที่แออัด หรือติดต่อคนจำนวนมาก"
-				break
 			case 5:
 				embed.Description = "ข้อ 7/8\nเป็นบุคลากรทางการแพทย์"
-				break
 			case 6:
 				embed.Description = "ข้อ 8/8\nมีผู้ใกล้ชิดป่วยเป็นไข้หวัดพร้อมกัน มากกว่า 5 คน ในช่วงสัปดาห์ที่ป่วย"
-				break
 			case 7:
 				ans := make([]int, len(ansStr))
 				for i, v := range ansStr {
@@ -648,7 +608,6 @@ func checkUpdateEmbed(s *discordgo.Session, chID, msgID string, val int) {
 				} else {
 					// default answer
 					v := searchResult(177)
-					found = true
 					embed.Description = "ผลการทดสอบ"
 					embed.Fields = []*discordgo.MessageEmbedField{
 						{
