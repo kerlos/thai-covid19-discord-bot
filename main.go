@@ -91,7 +91,7 @@ func main() {
 	}
 
 	c := cron.New()
-	c.AddFunc("CRON_TZ=Asia/Bangkok 00 12 * * *", broadcast)
+	c.AddFunc("CRON_TZ=Asia/Bangkok 00 19 * * *", broadcast)
 	c.Start()
 	// Wait here until CTRL-C or other term signal is received.
 	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
