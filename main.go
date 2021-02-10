@@ -17,9 +17,10 @@ import (
 )
 
 type config struct {
-	BotToken   string `mapstructure:"bot-token"`
-	ShardCount int    `mapstructure:"shard-count"`
-	Author     struct {
+	BotToken       string `mapstructure:"bot-token"`
+	ShardCount     int    `mapstructure:"shard-count"`
+	OwnerChannelID string `mapstructure:"owner-channel-id"`
+	Author         struct {
 		Name string `mapstructure:"name"`
 		URL  string `mapstructure:"url"`
 		Icon string `mapstructure:"icon"`
