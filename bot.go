@@ -211,7 +211,16 @@ func broadcastSubs() (err error) {
 	retriedList := make([]string, 0)
 	retriedCount := 1
 
-	for _, ch := range *chList {
+	broadcastList := *chList
+	if len(cfg.OwnerChannelID) > 0 {
+		ownerCh := channel{
+			DiscordID: cfg.OwnerChannelID,
+			Active:    true,
+		}
+		broadcastList = append([]channel{ownerCh}, broadcastList...)
+	}
+
+	for _, ch := range broadcastList {
 		shardID := getShardID(ch.DiscordID)
 		resp, err := dgs[shardID].ChannelMessageSendComplex(ch.DiscordID, msgData)
 		if err != nil || resp == nil {
