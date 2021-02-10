@@ -89,6 +89,7 @@ func main() {
 			return
 		}
 	}
+	broadcastSubs()
 
 	c := cron.New()
 	c.AddFunc("CRON_TZ=Asia/Bangkok 00 19 * * *", broadcast)
