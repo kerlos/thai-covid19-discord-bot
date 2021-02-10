@@ -214,8 +214,9 @@ func broadcastSubs() (err error) {
 	for _, ch := range *chList {
 		shardID := getShardID(ch.DiscordID)
 		resp, err := dgs[shardID].ChannelMessageSendComplex(ch.DiscordID, msgData)
-		if err != nil {
+		if err != nil || resp == nil {
 			retriedList = append(retriedList, ch.DiscordID)
+			continue
 		}
 
 		if embed.Image == nil {
@@ -233,7 +234,6 @@ func broadcastSubs() (err error) {
 				Embed: embed,
 			}
 		}
-		time.Sleep(100 * time.Millisecond)
 	}
 
 	for {
