@@ -110,11 +110,11 @@ func main() {
 			return
 		}
 	}
-	//broadcastSubs()
+	broadcastSubs()
 
 	c := cron.New()
 	c.AddFunc(fmt.Sprintf("CRON_TZ=%s", cfg.BroadcastCron), broadcast)
-	//c.Start()
+	c.Start()
 	// Wait here until CTRL-C or other term signal is received.
 	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
 	/*
