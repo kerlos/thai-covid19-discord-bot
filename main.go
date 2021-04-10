@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
@@ -25,6 +24,7 @@ type config struct {
 		URL  string `mapstructure:"url"`
 		Icon string `mapstructure:"icon"`
 	} `mapstructure:"author"`
+	BroadcastCron string `mapstructure:"broadcast-cron"`
 }
 
 var cfg config
@@ -50,12 +50,32 @@ func init() {
 		log.Panic(err)
 	}
 	initDb()
+	//initCache()
 
-	checkContent, err := ioutil.ReadFile("covid19_check_result.json")
+	checkContent, err := os.ReadFile("covid19_check_result.json")
 	if err != nil {
 		log.Panic(err)
 	}
 
+	provinceContent, err := os.ReadFile("provinces.json")
+	if err != nil {
+		log.Panic(err)
+	}
+
+	var provincesData []province
+	err = json.Unmarshal(provinceContent, &provincesData)
+	if err != nil {
+		log.Panic(err)
+	}
+	provinces = make(map[string]string)
+	//most used province
+	provinces["bkk"] = "bangkok"
+	provinces["กรุงเทพ"] = "bangkok"
+	provinces["กทม"] = "bangkok"
+	for _, v := range provincesData {
+		provinces[v.Slug] = v.Slug
+		provinces[v.Title] = v.Slug
+	}
 	err = json.Unmarshal(checkContent, &checkResults)
 	if err != nil {
 		log.Panic(err)
@@ -90,11 +110,11 @@ func main() {
 			return
 		}
 	}
-	broadcastSubs()
+	//broadcastSubs()
 
 	c := cron.New()
-	c.AddFunc("CRON_TZ=Asia/Bangkok 00 19 * * *", broadcast)
-	c.Start()
+	c.AddFunc(fmt.Sprintf("CRON_TZ=%s", cfg.BroadcastCron), broadcast)
+	//c.Start()
 	// Wait here until CTRL-C or other term signal is received.
 	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
 	/*
