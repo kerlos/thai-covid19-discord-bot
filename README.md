@@ -9,7 +9,9 @@
 พิมพ์ `/covid [ชื่อจังหวัด]` เพื่อตรวจสอบจำนวนผู้ติดเชื้อล่าสุด
 
 ![](https://i.imgur.com/tFmjzuo.png)
+
 ![](https://i.imgur.com/WLTMQ5f.png)
+
 ![](https://i.imgur.com/3BSBGXq.png)
 
 ## วิธีใช้
