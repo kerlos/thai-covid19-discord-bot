@@ -1,6 +1,7 @@
 bot-token: token-here
 owner-channel-id: 
 shard-count: 1 # change to 2 or more to support shard
+broadcast-cron: "Asia/Bangkok 00 15 * * *" # 15:00AM
 author:
   name: name-here
   url: url-here

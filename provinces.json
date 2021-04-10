@@ -1,0 +1,309 @@
+[{
+        "slug": "samutsakhon",
+        "title": "สมุทรสาคร"
+    },
+    {
+        "slug": "bangkok",
+        "title": "กรุงเทพมหานคร"
+    },
+    {
+        "slug": "chonburi",
+        "title": "ชลบุรี"
+    },
+    {
+        "slug": "pathumthani",
+        "title": "ปทุมธานี"
+    },
+    {
+        "slug": "samutprakan",
+        "title": "สมุทรปราการ"
+    },
+    {
+        "slug": "rayong",
+        "title": "ระยอง"
+    },
+    {
+        "slug": "nonthaburi",
+        "title": "นนทบุรี"
+    },
+    {
+        "slug": "tak",
+        "title": "ตาก"
+    },
+    {
+        "slug": "narathiwat",
+        "title": "นราธิวาส"
+    },
+    {
+        "slug": "chiangmai",
+        "title": "เชียงใหม่"
+    },
+    {
+        "slug": "phuket",
+        "title": "ภูเก็ต"
+    },
+    {
+        "slug": "chanthaburi",
+        "title": "จันทบุรี"
+    },
+    {
+        "slug": "nakhonpathom",
+        "title": "นครปฐม"
+    },
+    {
+        "slug": "songkhla",
+        "title": "สงขลา"
+    },
+    {
+        "slug": "yala",
+        "title": "ยะลา"
+    },
+    {
+        "slug": "angthong",
+        "title": "อ่างทอง"
+    },
+    {
+        "slug": "phetchaburi",
+        "title": "เพชรบุรี"
+    },
+    {
+        "slug": "pattani",
+        "title": "ปัตตานี"
+    },
+    {
+        "slug": "sakaeo",
+        "title": "สระแก้ว"
+    },
+    {
+        "slug": "suphanburi",
+        "title": "สุพรรณบุรี"
+    },
+    {
+        "slug": "samutsongkhram",
+        "title": "สมุทรสงคราม"
+    },
+    {
+        "slug": "chiangrai",
+        "title": "เชียงราย"
+    },
+    {
+        "slug": "prachuapkhirikhan",
+        "title": "ประจวบคีรีขันธ์"
+    },
+    {
+        "slug": "ayutthaya",
+        "title": "อยุธยา"
+    },
+    {
+        "slug": "ratchaburi",
+        "title": "ราชบุรี"
+    },
+    {
+        "slug": "chachoengsao",
+        "title": "ฉะเชิงเทรา"
+    },
+    {
+        "slug": "khonkaen",
+        "title": "ขอนแก่น"
+    },
+    {
+        "slug": "nakhonratchasima",
+        "title": "นครราชสีมา"
+    },
+    {
+        "slug": "suratthani",
+        "title": "สุราษฎร์ธานี"
+    },
+    {
+        "slug": "trat",
+        "title": "ตราด"
+    },
+    {
+        "slug": "chumphon",
+        "title": "ชุมพร"
+    },
+    {
+        "slug": "ubonratchathani",
+        "title": "อุบลราชธานี"
+    },
+    {
+        "slug": "krabi",
+        "title": "กระบี่"
+    },
+    {
+        "slug": "udonthani",
+        "title": "อุดรธานี"
+    },
+    {
+        "slug": "saraburi",
+        "title": "สระบุรี"
+    },
+    {
+        "slug": "lopburi",
+        "title": "ลพบุรี"
+    },
+    {
+        "slug": "satun",
+        "title": "สตูล"
+    },
+    {
+        "slug": "mahasarakham",
+        "title": "มหาสารคาม"
+    },
+    {
+        "slug": "lampang",
+        "title": "ลำปาง"
+    },
+    {
+        "slug": "nakhonsithammarat",
+        "title": "นครศรีธรรมราช"
+    },
+    {
+        "slug": "buriram",
+        "title": "บุรีรัมย์"
+    },
+    {
+        "slug": "prachinburi",
+        "title": "ปราจีนบุรี"
+    },
+    {
+        "slug": "chaiyaphum",
+        "title": "ชัยภูมิ"
+    },
+    {
+        "slug": "singburi",
+        "title": "สิงห์บุรี"
+    },
+    {
+        "slug": "nakhonsawan",
+        "title": "นครสวรรค์"
+    },
+    {
+        "slug": "phattalung",
+        "title": "พัทลุง"
+    },
+    {
+        "slug": "nakhonnayok",
+        "title": "นครนายก"
+    },
+    {
+        "slug": "kanchanaburi",
+        "title": "กาญจนบุรี"
+    },
+    {
+        "slug": "surin",
+        "title": "สุรินทร์"
+    },
+    {
+        "slug": "phitsanulok",
+        "title": "พิษณุโลก"
+    },
+    {
+        "slug": "trang",
+        "title": "ตรัง"
+    },
+    {
+        "slug": "loei",
+        "title": "เลย"
+    },
+    {
+        "slug": "chainat",
+        "title": "ชัยนาท"
+    },
+    {
+        "slug": "phichit",
+        "title": "พิจิตร"
+    },
+    {
+        "slug": "nongbualamphu",
+        "title": "หนองบัวลำภู"
+    },
+    {
+        "slug": "sisaket",
+        "title": "ศรีสะเกษ"
+    },
+    {
+        "slug": "phayao",
+        "title": "พะเยา"
+    },
+    {
+        "slug": "uthaithani",
+        "title": "อุทัยธานี"
+    },
+    {
+        "slug": "lamphun",
+        "title": "ลำพูน"
+    },
+    {
+        "slug": "uttaradit",
+        "title": "อุตรดิตถ์"
+    },
+    {
+        "slug": "phetchabun",
+        "title": "เพชรบูรณ์"
+    },
+    {
+        "slug": "mukdahan",
+        "title": "มุกดาหาร"
+    },
+    {
+        "slug": "maehongson",
+        "title": "แม่ฮ่องสอน"
+    },
+    {
+        "slug": "nongkhai",
+        "title": "หนองคาย"
+    },
+    {
+        "slug": "sukhothai",
+        "title": "สุโขทัย"
+    },
+    {
+        "slug": "amnatcharoen",
+        "title": "อำนาจเจริญ"
+    },
+    {
+        "slug": "kalasin",
+        "title": "กาฬสินธุ์"
+    },
+    {
+        "slug": "roiet",
+        "title": "ร้อยเอ็ด"
+    },
+    {
+        "slug": "yasothon",
+        "title": "ยโสธร"
+    },
+    {
+        "slug": "nakhonphanom",
+        "title": "นครพนม"
+    },
+    {
+        "slug": "nan",
+        "title": "น่าน"
+    },
+    {
+        "slug": "kamphaengphet",
+        "title": "กำแพงเพชร"
+    },
+    {
+        "slug": "phangnga",
+        "title": "พังงา"
+    },
+    {
+        "slug": "phrae",
+        "title": "แพร่"
+    },
+    {
+        "slug": "ranong",
+        "title": "ระนอง"
+    },
+    {
+        "slug": "sakonnakhon",
+        "title": "สกลนคร"
+    },
+    {
+        "slug": "buengkan",
+        "title": "บึงกาฬ"
+    }
+]

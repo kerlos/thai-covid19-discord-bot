@@ -54,7 +54,7 @@ var (
 
 const (
 	messageError = "เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง"
-	helpMsg      = "พิมพ์ \"/covid\" เพื่อดูรายงานปัจจุบัน\nพิมพ์ \"/covid sub\" เพื่อติดตามข่าวอัตโนมัติทุกวันเวลา 12.00 น.\nพิมพ์ \"/covid unsub\" เพื่อยกเลิกการติดตามข่าว\nพิมพ์ \"/covid check\" เพื่อทดสอบแบบประเมิณความเสี่ยง"
+	helpMsg      = "พิมพ์ \"/covid\" เพื่อดูรายงานปัจจุบัน\nพิมพ์ \"/covid sub\" เพื่อติดตามข่าวอัตโนมัติทุกวันเวลา 12.00 น.\nพิมพ์ \"/covid unsub\" เพื่อยกเลิกการติดตามข่าว\nพิมพ์ \"/covid check\" เพื่อทดสอบแบบประเมิณความเสี่ยง\nพิมพ์ \"/covid [ชื่อจังหวัด]\" เพื่อตรวจสอบจำนวนผู้ติดเชื้อล่าสุด"
 )
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -167,11 +167,55 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					}
 				}
 			default:
-				s.ChannelMessageSend(m.ChannelID, helpMsg)
+				p, ok := provinces[strings.ToLower(prms[1])]
+				//is province input
+				if ok {
+					embed, err := provinceCheckup(p)
+					if err != nil {
+						s.ChannelMessageSend(m.ChannelID, err.Error())
+					}
+					if embed == nil {
+						s.ChannelMessageSend(m.ChannelID, "ไม่พบข้อมูลจังหวัดในตอนนี้")
+					} else {
+						s.ChannelMessageSendEmbed(m.ChannelID, embed)
+					}
+				} else {
+					s.ChannelMessageSend(m.ChannelID, helpMsg)
+				}
 			}
 
 		}
 	}
+}
+
+func provinceCheckup(slug string) (embed *discordgo.MessageEmbed, err error) {
+	latest, err := getProvinceDataLatest()
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := getProvinceData(latest.LastUpdated)
+	if err != nil {
+		return nil, err
+	}
+	var selectedData provinceData
+	for i, v := range data.Data {
+		if v.Slug == slug {
+			selectedData = v
+			selectedData.Rank = i + 1
+			break
+		}
+	}
+	if selectedData.Rank == 0 {
+		return nil, nil
+	}
+
+	embed, err = buildProvinceEmbed(latest.LastUpdated, &selectedData)
+	if err != nil {
+		return nil, err
+	}
+
+	return embed, nil
 }
 
 func broadcastSubs() (err error) {
@@ -342,6 +386,58 @@ func buildEmbed(data *covidData) (*discordgo.MessageEmbed, error) {
 	return &embed, nil
 }
 
+func buildProvinceEmbed(date string, data *provinceData) (*discordgo.MessageEmbed, error) {
+	t, err := time.ParseInLocation("2006-1-2", date, loc)
+	if err != nil {
+		return nil, err
+	}
+	color := 0
+	switch data.CurrentStatus.InfectionLevelByRule {
+	case 4:
+		color = 14163736
+	case 3:
+		color = 16753920
+	case 2:
+		color = 16776960
+	case 1:
+		color = 5295520
+	case 0:
+		color = 12500670
+	}
+	embed := discordgo.MessageEmbed{
+		Title:       fmt.Sprintf("รายงานสถานการณ์ โควิด-19 ประจำจังหวัด %s", data.Title),
+		Description: fmt.Sprintf("ข้อมูลล่าสุดเมื่อ%s", currentDateTH(t)),
+		Color:       color,
+		Provider: &discordgo.MessageEmbedProvider{
+			Name: "www.sanook.com",
+			URL:  "https://www.sanook.com/covid-19",
+		},
+		Fields: []*discordgo.MessageEmbedField{
+			{
+				Name:   "จังหวัด",
+				Value:  data.Title,
+				Inline: false,
+			},
+			{
+				Name:   "🤒 ติดเชื้อสะสมในจังหวัด",
+				Value:  fmt.Sprintf("%s (เพิ่มขึ้น %s)", humanize.Comma(int64(data.CurrentStatus.Accumulate)), humanize.Comma(int64(data.CurrentStatus.New))),
+				Inline: false,
+			},
+			{
+				Name:   "📈 ลำดับจังหวัดตามจำนวนผู้ติดเชื้อ",
+				Value:  fmt.Sprintf("ลำดับที่ %s", humanize.Comma(int64(data.Rank))),
+				Inline: false,
+			},
+		},
+		URL: "https://www.sanook.com/covid-19/",
+		Footer: &discordgo.MessageEmbedFooter{
+			Text: fmt.Sprintf("ข้อมูลจาก www.sanook.com\nบอทโดย %s\n%s", cfg.Author.Name, cfg.Author.URL),
+		},
+	}
+
+	return &embed, nil
+}
+
 func dateEqual(date1, date2 time.Time) bool {
 	y1, m1, d1 := date1.Date()
 	y2, m2, d2 := date2.Date()
@@ -378,6 +474,8 @@ func buildChart() (*bytes.Buffer, error) {
 	dlen := len(dt.Timeline.Cases)
 	ticks := make([]chart.Tick, dlen)
 	max := 0
+	min := 9999999
+
 	c := chart.ContinuousSeries{
 		Name:    "ติดเชื้อสะสม",
 		XValues: make([]float64, dlen),
@@ -439,6 +537,10 @@ func buildChart() (*bytes.Buffer, error) {
 		if dt.Timeline.Cases[k] > max {
 			max = dt.Timeline.Cases[k]
 		}
+
+		if dt.Timeline.Cases[k] < min {
+			min = dt.Timeline.Cases[k]
+		}
 	}
 	graph := chart.Chart{
 		Font:   f,
@@ -450,7 +552,7 @@ func buildChart() (*bytes.Buffer, error) {
 		},
 		YAxis: chart.YAxis{
 			Range: &chart.ContinuousRange{
-				Min: 0.0,
+				Min: float64(min) - (float64(min) * 0.2),
 				Max: float64(max),
 			},
 			Style: chart.StyleShow(),
