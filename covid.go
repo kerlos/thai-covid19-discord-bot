@@ -254,7 +254,17 @@ func getProvinceData(date string) (data *provinceDataResponse, err error) {
 		if err != nil {
 			return nil, err
 		}
-		ca.Set(ck, storeData, time.Hour*36)
+		isAllZero := true
+		for _, v := range data.Data {
+			if v.CurrentStatus.Accumulate > 0 {
+				isAllZero = false
+				break
+			}
+		}
+		if isAllZero {
+			return nil, nil
+		}
+		ca.Set(ck, storeData, time.Hour*24*7)
 		return data, nil
 	}
 }
