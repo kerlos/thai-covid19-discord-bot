@@ -194,23 +194,39 @@ func provinceCheckup(slug string) (embed *discordgo.MessageEmbed, err error) {
 		return nil, err
 	}
 
-	data, err := getProvinceData(latest.LastUpdated)
-	if err != nil {
-		return nil, err
-	}
 	var selectedData provinceData
-	for i, v := range data.Data {
-		if v.Slug == slug {
-			selectedData = v
-			selectedData.Rank = i + 1
-			break
+	maxDateLookback := 30
+	dateLookback := 0
+	latestDt, err := time.ParseInLocation("2006-1-2", latest.LastUpdated, loc)
+	for {
+		data, err := getProvinceData(latestDt.Format("2006-1-2"))
+		if err != nil {
+			return nil, err
 		}
+		if data == nil {
+			latestDt = latestDt.AddDate(0, 0, -1)
+			dateLookback++
+			if maxDateLookback > dateLookback {
+				return nil, nil
+			}
+			continue
+		}
+
+		for i, v := range data.Data {
+			if v.Slug == slug {
+				selectedData = v
+				selectedData.Rank = i + 1
+				break
+			}
+		}
+		break
 	}
+
 	if selectedData.Rank == 0 {
 		return nil, nil
 	}
 
-	embed, err = buildProvinceEmbed(latest.LastUpdated, &selectedData)
+	embed, err = buildProvinceEmbed(latestDt.Format("2006-1-2"), &selectedData)
 	if err != nil {
 		return nil, err
 	}
