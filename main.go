@@ -12,6 +12,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/patrickmn/go-cache"
 	"github.com/robfig/cron/v3"
+	"github.com/servusdei2018/shards"
 	"github.com/spf13/viper"
 )
 
@@ -31,6 +32,7 @@ var cfg config
 var dgs []*discordgo.Session
 var ca *cache.Cache
 var loc *time.Location
+var Mgr *shards.Manager
 
 func init() {
 	viper.AddConfigPath(".")
@@ -86,37 +88,28 @@ func main() {
 	var err error
 	dgs = make([]*discordgo.Session, 0)
 
-	for i := 0; i < cfg.ShardCount; i++ {
-		dg, err := discordgo.New("Bot " + cfg.BotToken)
-		if err != nil {
-			panic(err)
-		}
-		// Assign Shard
-		dg.ShardID = i
-		dg.ShardCount = cfg.ShardCount
-
-		// Register the messageCreate func as a callback for MessageCreate events.
-		dg.AddHandler(messageCreate)
-		dgs = append(dgs, dg)
+	Mgr, err = shards.New("Bot " + cfg.BotToken)
+	if err != nil {
+		fmt.Println("[ERROR] Error creating manager,", err)
+		return
 	}
-	dgs[0].AddHandler(checkReactionAdd)
-	dgs[0].AddHandler(checkReactionRemove)
+	Mgr.AddHandler(messageCreate)
+	Mgr.Shards[0].AddHandler(checkReactionAdd)
+	Mgr.Shards[0].AddHandler(checkReactionRemove)
 
-	// Open a websocket connection to Discord and begin listening.
-	for i, dg := range dgs {
-		err = dg.Open()
-		if err != nil {
-			fmt.Printf("error opening connection for shard %v, %s", i, err.Error())
-			return
-		}
+	err = Mgr.Start()
+	if err != nil {
+		fmt.Println("[ERROR] Error starting manager,", err)
+		return
 	}
+	// Wait here until CTRL-C or other term signal is received.
+	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
+
 	broadcastSubs()
 
 	c := cron.New()
 	c.AddFunc(fmt.Sprintf("CRON_TZ=%s", cfg.BroadcastCron), broadcast)
 	c.Start()
-	// Wait here until CTRL-C or other term signal is received.
-	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
 	/*
 		now := time.Now().In(loc)
 		noon := time.Date(now.Year(), now.Month(), now.Day(), 11, 59, 59, 0, loc)
@@ -139,6 +132,8 @@ func main() {
 		dg.Close()
 	}
 	db.Close()
+	fmt.Println("[INFO] Stopping shard manager...")
+	Mgr.Shutdown()
 }
 
 func broadcast() {
