@@ -281,8 +281,9 @@ func broadcastSubs() (err error) {
 	}
 
 	for _, ch := range broadcastList {
-		shardID := getShardID(ch.DiscordID)
-		resp, err := dgs[shardID].ChannelMessageSendComplex(ch.DiscordID, msgData)
+		//shardID := getShardID(ch.DiscordID)
+		resp, err := Mgr.Gateway.ChannelMessageSendComplex(ch.DiscordID, msgData)
+		//resp, err := dgs[shardID].ChannelMessageSendComplex(ch.DiscordID, msgData)
 		if err != nil || resp == nil {
 			retriedList = append(retriedList, ch.DiscordID)
 			continue
@@ -298,7 +299,7 @@ func broadcastSubs() (err error) {
 			}
 			ca.Set(fmt.Sprintf("chart-%s", now.Format("Jan2")), embed.Image, 36*time.Hour)
 			ca.Set("embed", embed, 30*time.Minute)
-			dgs[shardID].ChannelMessageEditEmbed(ch.DiscordID, resp.ID, embed)
+			Mgr.Gateway.ChannelMessageEditEmbed(ch.DiscordID, resp.ID, embed)
 			msgData = &discordgo.MessageSend{
 				Embed: embed,
 			}
@@ -316,7 +317,7 @@ func broadcastSubs() (err error) {
 			tmp := make([]string, 0)
 			time.Sleep(1 * time.Minute)
 			for _, id := range retriedList {
-				_, err = dgs[0].ChannelMessageSendEmbed(id, embed)
+				_, err = Mgr.Gateway.ChannelMessageSendEmbed(id, embed)
 				if err != nil {
 					tmp = append(tmp, id)
 				}
@@ -601,15 +602,15 @@ func startCheck(channelID string) error {
 		URL:         "https://covid19.th-stat.com/th/self_screening?ans=",
 		Description: "ข้อ 1/8\nผู้ป่วยมีอุณหภูมิกายตั้งแต่ 37.5 องศาขึ้นไป หรือ รู้สึกว่ามีไข้",
 	}
-	msg, err := dgs[0].ChannelMessageSendEmbed(channelID, embed)
+	msg, err := Mgr.Gateway.ChannelMessageSendEmbed(channelID, embed)
 	if err != nil {
 		return err
 	}
-	err = dgs[0].MessageReactionAdd(channelID, msg.ID, "✅")
+	err = Mgr.Gateway.MessageReactionAdd(channelID, msg.ID, "✅")
 	if err != nil {
 		return err
 	}
-	err = dgs[0].MessageReactionAdd(channelID, msg.ID, "❌")
+	err = Mgr.Gateway.MessageReactionAdd(channelID, msg.ID, "❌")
 	if err != nil {
 		return err
 	}

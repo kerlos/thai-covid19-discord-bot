@@ -9,7 +9,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/bwmarrin/discordgo"
 	"github.com/patrickmn/go-cache"
 	"github.com/robfig/cron/v3"
 	"github.com/servusdei2018/shards"
@@ -29,7 +28,6 @@ type config struct {
 }
 
 var cfg config
-var dgs []*discordgo.Session
 var ca *cache.Cache
 var loc *time.Location
 var Mgr *shards.Manager
@@ -86,7 +84,6 @@ func init() {
 
 func main() {
 	var err error
-	dgs = make([]*discordgo.Session, 0)
 
 	Mgr, err = shards.New("Bot " + cfg.BotToken)
 	if err != nil {
@@ -105,7 +102,7 @@ func main() {
 	// Wait here until CTRL-C or other term signal is received.
 	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
 
-	broadcastSubs()
+	//broadcastSubs()
 
 	c := cron.New()
 	c.AddFunc(fmt.Sprintf("CRON_TZ=%s", cfg.BroadcastCron), broadcast)
@@ -128,9 +125,6 @@ func main() {
 
 	// Cleanly close down the Discord session.
 	c.Stop()
-	for _, dg := range dgs {
-		dg.Close()
-	}
 	db.Close()
 	fmt.Println("[INFO] Stopping shard manager...")
 	Mgr.Shutdown()
