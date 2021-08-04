@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bwmarrin/discordgo"
 	"github.com/patrickmn/go-cache"
 	"github.com/robfig/cron/v3"
 	"github.com/servusdei2018/shards"
@@ -91,14 +92,15 @@ func main() {
 		return
 	}
 	Mgr.AddHandler(messageCreate)
-
+	Mgr.AddHandler(checkReactionAdd)
+	Mgr.AddHandler(checkReactionRemove)
+	Mgr.RegisterIntent(discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages | discordgo.IntentsDirectMessageReactions | discordgo.IntentsGuildMessageReactions)
 	err = Mgr.Start()
 	if err != nil {
 		fmt.Println("[ERROR] Error starting manager,", err)
 		return
 	}
-	Mgr.Shards[0].AddHandler(checkReactionAdd)
-	Mgr.Shards[0].AddHandler(checkReactionRemove)
+
 	// Wait here until CTRL-C or other term signal is received.
 	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
 
