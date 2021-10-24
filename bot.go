@@ -167,21 +167,23 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					}
 				}
 			default:
-				p, ok := provinces[strings.ToLower(prms[1])]
-				//is province input
-				if ok {
-					embed, err := provinceCheckup(p)
-					if err != nil {
-						s.ChannelMessageSend(m.ChannelID, err.Error())
-					}
-					if embed == nil {
-						s.ChannelMessageSend(m.ChannelID, "ไม่พบข้อมูลจังหวัดในตอนนี้")
-					} else {
-						s.ChannelMessageSendEmbed(m.ChannelID, embed)
-					}
-				} else {
-					s.ChannelMessageSend(m.ChannelID, helpMsg)
-				}
+				// deprecated
+				// p, ok := provinces[strings.ToLower(prms[1])]
+				// //is province input
+				// if ok {
+				// 	embed, err := provinceCheckup(p)
+				// 	if err != nil {
+				// 		s.ChannelMessageSend(m.ChannelID, err.Error())
+				// 	}
+				// 	if embed == nil {
+				// 		s.ChannelMessageSend(m.ChannelID, "ไม่พบข้อมูลจังหวัดในตอนนี้")
+				// 	} else {
+				// 		s.ChannelMessageSendEmbed(m.ChannelID, embed)
+				// 	}
+				// } else {
+				// 	s.ChannelMessageSend(m.ChannelID, helpMsg)
+				// }
+				s.ChannelMessageSend(m.ChannelID, helpMsg)
 			}
 
 		}
