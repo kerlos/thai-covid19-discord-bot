@@ -6,13 +6,10 @@
 พิมพ์ `/covid sub` เพื่อติดตามข่าวอัตโนมัติทุกวันเวลา 15.00 น.  
 พิมพ์ `/covid unsub` เพื่อยกเลิกการติดตามข่าว  
 พิมพ์ `/covid check` เพื่อทำแบบประเมิณความเสี่ยง  
-พิมพ์ `/covid [ชื่อจังหวัด]` เพื่อตรวจสอบจำนวนผู้ติดเชื้อล่าสุด
 
 ![](https://i.imgur.com/tFmjzuo.png)
 
 ![](https://i.imgur.com/WLTMQ5f.png)
-
-![](https://i.imgur.com/3BSBGXq.png)
 
 ## วิธีใช้
 สามารถเชิญบอทเข้า Discord Server ได้จาก link
